@@ -1,0 +1,14 @@
+{
+  "name": "digitale-behoerde-backend",
+  "version": "1.0.0",
+  "description": "Backend fuer die Digitale Behoerde",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "echo \"Backend tests kommen spaeter\" && exit 0"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.3"
+  }
+}
