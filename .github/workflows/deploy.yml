@@ -55,6 +55,23 @@ jobs:
       - name: Login to Azure Container Registry
         run: az acr login --name ${{ secrets.ACR_NAME }}
 
+      - name: Read Azure Container Registry credentials
+        id: acr-credentials
+        run: |
+          ACR_USERNAME=$(az acr credential show \
+            --name ${{ secrets.ACR_NAME }} \
+            --query "username" \
+            --output tsv)
+          ACR_PASSWORD=$(az acr credential show \
+            --name ${{ secrets.ACR_NAME }} \
+            --query "passwords[0].value" \
+            --output tsv)
+
+          echo "::add-mask::$ACR_USERNAME"
+          echo "::add-mask::$ACR_PASSWORD"
+          echo "username=$ACR_USERNAME" >> "$GITHUB_OUTPUT"
+          echo "password=$ACR_PASSWORD" >> "$GITHUB_OUTPUT"
+
       - name: Build backend image
         run: docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }} ./backend
 
@@ -72,11 +89,17 @@ jobs:
           az containerapp update \
             --name ${{ secrets.AZURE_BACKEND_APP }} \
             --resource-group ${{ secrets.AZURE_RG }} \
-            --image ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }} \
+            --registry-server ${{ secrets.ACR_LOGIN_SERVER }} \
+            --registry-username ${{ steps.acr-credentials.outputs.username }} \
+            --registry-password ${{ steps.acr-credentials.outputs.password }}
 
       - name: Deploy frontend to Azure Container App
         run: |
           az containerapp update \
             --name ${{ secrets.AZURE_FRONTEND_APP }} \
             --resource-group ${{ secrets.AZURE_RG }} \
-            --image ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }} \
+            --registry-server ${{ secrets.ACR_LOGIN_SERVER }} \
+            --registry-username ${{ steps.acr-credentials.outputs.username }} \
+            --registry-password ${{ steps.acr-credentials.outputs.password }}
