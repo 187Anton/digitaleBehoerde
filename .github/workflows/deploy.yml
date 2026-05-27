@@ -55,22 +55,45 @@ jobs:
       - name: Login to Azure Container Registry
         run: az acr login --name ${{ secrets.ACR_NAME }}
 
-      - name: Read Azure Container Registry credentials
-        id: acr-credentials
+      - name: Configure Container Apps for ACR access
         run: |
-          ACR_USERNAME=$(az acr credential show \
+          ACR_ID=$(az acr show \
             --name ${{ secrets.ACR_NAME }} \
-            --query "username" \
-            --output tsv)
-          ACR_PASSWORD=$(az acr credential show \
-            --name ${{ secrets.ACR_NAME }} \
-            --query "passwords[0].value" \
+            --query "id" \
             --output tsv)
 
-          echo "::add-mask::$ACR_USERNAME"
-          echo "::add-mask::$ACR_PASSWORD"
-          echo "username=$ACR_USERNAME" >> "$GITHUB_OUTPUT"
-          echo "password=$ACR_PASSWORD" >> "$GITHUB_OUTPUT"
+          for APP_NAME in "${{ secrets.AZURE_BACKEND_APP }}" "${{ secrets.AZURE_FRONTEND_APP }}"; do
+            az containerapp identity assign \
+              --name "$APP_NAME" \
+              --resource-group ${{ secrets.AZURE_RG }} \
+              --system-assigned
+
+            PRINCIPAL_ID=$(az containerapp identity show \
+              --name "$APP_NAME" \
+              --resource-group ${{ secrets.AZURE_RG }} \
+              --query "principalId" \
+              --output tsv)
+
+            ROLE_COUNT=$(az role assignment list \
+              --assignee-object-id "$PRINCIPAL_ID" \
+              --scope "$ACR_ID" \
+              --query "[?roleDefinitionName=='AcrPull'] | length(@)" \
+              --output tsv)
+
+            if [ "$ROLE_COUNT" = "0" ]; then
+              az role assignment create \
+                --assignee-object-id "$PRINCIPAL_ID" \
+                --assignee-principal-type ServicePrincipal \
+                --role AcrPull \
+                --scope "$ACR_ID"
+            fi
+
+            az containerapp registry set \
+              --name "$APP_NAME" \
+              --resource-group ${{ secrets.AZURE_RG }} \
+              --server ${{ secrets.ACR_LOGIN_SERVER }} \
+              --identity system
+          done
 
       - name: Build backend image
         run: docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }} ./backend
@@ -89,17 +112,11 @@ jobs:
           az containerapp update \
             --name ${{ secrets.AZURE_BACKEND_APP }} \
             --resource-group ${{ secrets.AZURE_RG }} \
-            --image ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }} \
-            --registry-server ${{ secrets.ACR_LOGIN_SERVER }} \
-            --registry-username ${{ steps.acr-credentials.outputs.username }} \
-            --registry-password ${{ steps.acr-credentials.outputs.password }}
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}
 
       - name: Deploy frontend to Azure Container App
         run: |
           az containerapp update \
             --name ${{ secrets.AZURE_FRONTEND_APP }} \
             --resource-group ${{ secrets.AZURE_RG }} \
-            --image ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }} \
-            --registry-server ${{ secrets.ACR_LOGIN_SERVER }} \
-            --registry-username ${{ steps.acr-credentials.outputs.username }} \
-            --registry-password ${{ steps.acr-credentials.outputs.password }}
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
