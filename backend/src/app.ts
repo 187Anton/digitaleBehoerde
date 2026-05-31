@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { env } from "./lib/env.js";
-import { authRouter } from "./routes/auth.js";
+import { authRouter } from "./routes/auth.routes.js";
 
 export function createApp() {
   const app = express();

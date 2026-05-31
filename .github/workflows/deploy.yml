@@ -17,6 +17,20 @@ env:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: digitale_behoerde_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d digitale_behoerde_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - name: Checkout repository
@@ -38,8 +52,17 @@ jobs:
         working-directory: ./backend
         run: npm install
 
+      - name: Prepare backend test database
+        working-directory: ./backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/digitale_behoerde_test
+        run: npx prisma migrate deploy
+
       - name: Test backend
         working-directory: ./backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/digitale_behoerde_test
+          JWT_SECRET: ci-test-secret
         run: npm test
 
       - name: Build Docker containers
