@@ -21,7 +21,3 @@ Web-App zur digitalen Abwicklung ausgewählter Behördengänge.
 - Einfache Sachbearbeiteransicht
 
 - Docker Compose mit Frontend, Backend und Datenbank
-
-Hinweis: Test-Commit zur Workflow-Pruefung.
-
-Hinweis: Zweiter Test-Commit zur Pipeline-Pruefung.

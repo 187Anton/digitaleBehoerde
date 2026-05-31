@@ -1,8 +1,12 @@
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
+import { hashPassword } from "../src/lib/password.js";
+
 const prisma = new PrismaClient();
+
 async function main() {
-  const passwordHash = await bcrypt.hash("password123", 10);
+  const passwordHash = await hashPassword("DemoPasswort123");
+
   await prisma.user.upsert({
     where: { email: "buerger@example.com" },
     update: { passwordHash },
