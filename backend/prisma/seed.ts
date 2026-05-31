@@ -1,3 +1,4 @@
+import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
 import { hashPassword } from "../src/lib/password.js";
 
@@ -17,10 +18,19 @@ async function main() {
       lastName: "Buerger",
     },
   });
-
-  console.log("Seed abgeschlossen.");
+  await prisma.user.upsert({
+    where: { email: "sachbearbeiter@example.com" },
+    update: { passwordHash },
+    create: {
+      email: "sachbearbeiter@example.com",
+      passwordHash,
+      role: "CASEWORKER",
+      firstName: "Sven",
+      lastName: "Sachbearbeiter",
+    },
+  });
+  console.log("Seed abgeschlossen. Demo-Login: buerger@example.com / password123");
 }
-
 main()
   .then(() => prisma.$disconnect())
   .catch(async (e) => {
