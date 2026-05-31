@@ -1,15 +1,17 @@
 import { PrismaClient } from "@prisma/client";
+import { hashPassword } from "../src/lib/password.js";
 
 const prisma = new PrismaClient();
 
-// Legt  Demo-Bürger an, echtes Passwort-Hashing tbd
 async function main() {
+  const passwordHash = await hashPassword("DemoPasswort123");
+
   await prisma.user.upsert({
     where: { email: "buerger@example.com" },
-    update: {},
+    update: { passwordHash },
     create: {
       email: "buerger@example.com",
-      passwordHash: "placeholder-wird-im-auth-feature-ersetzt",
+      passwordHash,
       role: "CITIZEN",
       firstName: "Bea",
       lastName: "Buerger",
