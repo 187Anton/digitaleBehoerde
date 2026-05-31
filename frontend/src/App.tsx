@@ -1,6 +1,4 @@
-import React from "react";
-
-function App() {
+function App(): JSX.Element {
   return (
     <main style={{ fontFamily: "Arial, sans-serif", padding: "40px" }}>
       <h1>Digitale Behörde</h1>
