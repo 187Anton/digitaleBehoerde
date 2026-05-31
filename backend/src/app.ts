@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import { env } from "./lib/env.js";
+import { authRouter } from "./routes/auth.js";
 
 export function createApp() {
   const app = express();
@@ -16,6 +17,20 @@ export function createApp() {
   app.get("/api/health", (_req, res) => {
     res.json({ status: "ok", service: "digitale-behoerde-backend" });
   });
+
+  app.use("/api/auth", authRouter);
+
+  app.use(
+    (
+      err: unknown,
+      _req: express.Request,
+      res: express.Response,
+      _next: express.NextFunction
+    ) => {
+      console.error(err);
+      res.status(500).json({ error: "Interner Serverfehler." });
+    }
+  );
 
   return app;
 }
