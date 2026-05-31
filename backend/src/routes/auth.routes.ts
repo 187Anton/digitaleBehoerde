@@ -1,5 +1,5 @@
 import { Router } from "express";
-import bcrypt from "bcryptjs";
+import bcrypt from "bcrypt";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import { AUTH_COOKIE, signToken } from "../lib/auth.js";
@@ -22,7 +22,7 @@ authRouter.post("/register", async (req, res) => {
     });
   }
   const { email, password, firstName, lastName } = parsed.data;
-  const passwordHash = await bcrypt.hash(password, 10);
+  const passwordHash = await bcrypt.hash(password, 12);
   try {
     const user = await prisma.user.create({
       data: { email, passwordHash, firstName, lastName },

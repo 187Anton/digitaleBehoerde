@@ -5,7 +5,6 @@ export const env = {
   jwtSecret:
     process.env.JWT_SECRET ??
     "development-only-secret-change-before-production",
-  jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? "1h",
 };
 
 export const isProduction = env.nodeEnv === "production";
