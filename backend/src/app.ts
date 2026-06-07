@@ -3,6 +3,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import { env } from "./lib/env.js";
 import { authRouter } from "./routes/auth.routes.js";
+import { servicesRouter } from "./routes/services.routes.js";
 
 export function createApp() {
   const app = express();
@@ -19,7 +20,7 @@ export function createApp() {
   });
 
   app.use("/api/auth", authRouter);
-
+  app.use("/api/services", servicesRouter);
   app.use(
     (
       err: unknown,
