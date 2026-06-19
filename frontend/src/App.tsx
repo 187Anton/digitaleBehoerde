@@ -1,15 +1,27 @@
 import { FormEvent, useEffect, useState } from "react";
 import {
+  Application,
   AuthResponse,
+  ResidenceChangeInput,
   Service,
+  createResidenceChange,
+  fetchApplications,
   fetchCurrentUser,
   fetchServices,
   login,
   logout,
   register,
 } from "./api";
+import { ResidenceChangeForm } from "./ResidenceChangeForm";
 type Mode = "login" | "register";
-type View = "catalog" | "service-detail";
+type View = "catalog" | "service-detail" | "applications";
+
+const statusLabels: Record<Application["status"], string> = {
+  SUBMITTED: "Eingereicht",
+  IN_REVIEW: "In Bearbeitung",
+  APPROVED: "Genehmigt",
+  REJECTED: "Abgelehnt",
+};
 function App(): JSX.Element {
   const [mode, setMode] = useState<Mode>("login");
   const [user, setUser] = useState<AuthResponse["user"] | null>(null);
@@ -22,6 +34,7 @@ function App(): JSX.Element {
   const [view, setView] = useState<View>("catalog");
   const [services, setServices] = useState<Service[]>([]);
   const [activeService, setActiveService] = useState<Service | null>(null);
+  const [applications, setApplications] = useState<Application[]>([]);
   useEffect(() => {
     fetchCurrentUser()
       .then((response) => setUser(response.user))
@@ -31,9 +44,15 @@ function App(): JSX.Element {
     if (!user) {
       return;
     }
-    fetchServices()
-      .then((response) => setServices(response.services))
-      .catch(() => setServices([]));
+    Promise.all([fetchServices(), fetchApplications()])
+      .then(([servicesResponse, applicationsResponse]) => {
+        setServices(servicesResponse.services);
+        setApplications(applicationsResponse.applications);
+      })
+      .catch(() => {
+        setServices([]);
+        setApplications([]);
+      });
   }, [user]);
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -60,6 +79,7 @@ function App(): JSX.Element {
       setUser(null);
       setView("catalog");
       setActiveService(null);
+      setApplications([]);
       setMessage("Erfolgreich abgemeldet.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Abmeldung fehlgeschlagen.");
@@ -78,6 +98,21 @@ function App(): JSX.Element {
     setActiveService(null);
     setView("catalog");
   }
+  async function handleResidenceChange(data: ResidenceChangeInput) {
+    setIsLoading(true);
+    setMessage("");
+    try {
+      const response = await createResidenceChange(data);
+      setApplications((current) => [response.application, ...current]);
+      setView("applications");
+      setActiveService(null);
+      setMessage("Wohnsitzummeldung wurde erfolgreich eingereicht.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Antrag konnte nicht gesendet werden.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
   return (
     <main style={{ fontFamily: "Arial, sans-serif", padding: "40px" }}>
       <h1>Digitale Behörde</h1>
@@ -91,6 +126,14 @@ function App(): JSX.Element {
               Abmelden
             </button>
           </div>
+          <nav style={{ display: "flex", gap: "12px", marginTop: "20px" }}>
+            <button type="button" onClick={backToCatalog}>
+              Antragskatalog
+            </button>
+            <button type="button" onClick={() => setView("applications")}>
+              Meine Antraege ({applications.length})
+            </button>
+          </nav>
           {view === "catalog" ? (
             <section style={{ marginTop: "24px" }}>
               <h2>Antragskatalog</h2>
@@ -129,9 +172,37 @@ function App(): JSX.Element {
               </button>
               <h2>{activeService.title}</h2>
               <p>{activeService.description}</p>
-              <p style={{ marginTop: "24px", color: "#666" }}>
-                Das Antragsformular folgt im naechsten Feature.
-              </p>
+              {activeService.type === "RESIDENCE_CHANGE" ? (
+                <ResidenceChangeForm
+                  isSubmitting={isLoading}
+                  onSubmit={handleResidenceChange}
+                />
+              ) : null}
+            </section>
+          ) : null}
+          {view === "applications" ? (
+            <section style={{ marginTop: "24px" }}>
+              <h2>Meine Antraege</h2>
+              {applications.length === 0 ? <p>Noch keine Antraege eingereicht.</p> : null}
+              <ul style={{ listStyle: "none", padding: 0 }}>
+                {applications.map((application) => (
+                  <li
+                    key={application.id}
+                    style={{ border: "1px solid #ccc", padding: "16px", marginBottom: "12px" }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: "16px" }}>
+                      <strong>Wohnsitz ummelden</strong>
+                      <span>{statusLabels[application.status]}</span>
+                    </div>
+                    <p style={{ marginBottom: 0, color: "#555" }}>
+                      Eingereicht am {new Date(application.createdAt).toLocaleDateString("de-DE")}
+                      {application.residenceChange
+                        ? ` · Neue Anschrift: ${application.residenceChange.newStreet}, ${application.residenceChange.newPostalCode} ${application.residenceChange.newCity}`
+                        : ""}
+                    </p>
+                  </li>
+                ))}
+              </ul>
             </section>
           ) : null}
         </section>
