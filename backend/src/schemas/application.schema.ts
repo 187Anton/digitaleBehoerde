@@ -21,3 +21,7 @@ export const residenceChangeSchema = z.object({
 });
 
 export type ResidenceChangeInput = z.infer<typeof residenceChangeSchema>;
+
+export const applicationStatusSchema = z.object({
+  status: z.enum(["IN_REVIEW", "APPROVED", "REJECTED"]),
+});
