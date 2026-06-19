@@ -25,6 +25,24 @@ export type Service = {
 export type ServicesResponse = {
   services: Service[];
 };
+export type ResidenceChangeInput = {
+  moveDate: string;
+  oldStreet: string;
+  oldPostalCode: string;
+  oldCity: string;
+  newStreet: string;
+  newPostalCode: string;
+  newCity: string;
+  householdSize: number;
+};
+export type Application = {
+  id: string;
+  type: "RESIDENCE_CHANGE";
+  status: "SUBMITTED" | "IN_REVIEW" | "APPROVED" | "REJECTED";
+  createdAt: string;
+  updatedAt: string;
+  residenceChange: (ResidenceChangeInput & { id: string; applicationId: string }) | null;
+};
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     credentials: "include",
@@ -62,4 +80,15 @@ export function logout(): Promise<{ ok: true }> {
 }
 export function fetchServices(): Promise<ServicesResponse> {
   return request<ServicesResponse>("/api/services");
+}
+export function fetchApplications(): Promise<{ applications: Application[] }> {
+  return request<{ applications: Application[] }>("/api/applications");
+}
+export function createResidenceChange(
+  payload: ResidenceChangeInput
+): Promise<{ application: Application }> {
+  return request<{ application: Application }>("/api/applications/residence-change", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
