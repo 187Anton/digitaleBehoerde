@@ -35,13 +35,21 @@ export type ResidenceChangeInput = {
   newCity: string;
   householdSize: number;
 };
+export type ApplicationStatus = "SUBMITTED" | "IN_REVIEW" | "APPROVED" | "REJECTED";
 export type Application = {
   id: string;
   type: "RESIDENCE_CHANGE";
-  status: "SUBMITTED" | "IN_REVIEW" | "APPROVED" | "REJECTED";
+  status: ApplicationStatus;
+  userId: string;
   createdAt: string;
   updatedAt: string;
   residenceChange: (ResidenceChangeInput & { id: string; applicationId: string }) | null;
+  user?: {
+    id: string;
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+  };
 };
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -91,4 +99,19 @@ export function createResidenceChange(
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+export function fetchCaseworkerApplications(): Promise<{ applications: Application[] }> {
+  return request<{ applications: Application[] }>("/api/caseworker/applications");
+}
+export function updateApplicationStatus(
+  applicationId: string,
+  status: Exclude<ApplicationStatus, "SUBMITTED">
+): Promise<{ application: Application }> {
+  return request<{ application: Application }>(
+    `/api/caseworker/applications/${encodeURIComponent(applicationId)}/status`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    }
+  );
 }

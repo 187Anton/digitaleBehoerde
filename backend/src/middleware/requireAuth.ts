@@ -20,3 +20,13 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
     res.status(401).json({ error: "Ungueltiges oder abgelaufenes Token" });
   }
 }
+
+export function requireRole(role: JwtPayload["role"]) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (req.user?.role !== role) {
+      res.status(403).json({ error: "Keine Berechtigung" });
+      return;
+    }
+    next();
+  };
+}
