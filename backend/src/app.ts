@@ -5,6 +5,7 @@ import { env } from "./lib/env.js";
 import { authRouter } from "./routes/auth.routes.js";
 import { servicesRouter } from "./routes/services.routes.js";
 import { applicationsRouter } from "./routes/applications.routes.js";
+import { caseworkerRouter } from "./routes/caseworker.routes.js";
 
 export function createApp() {
   const app = express();
@@ -23,6 +24,7 @@ export function createApp() {
   app.use("/api/auth", authRouter);
   app.use("/api/services", servicesRouter);
   app.use("/api/applications", applicationsRouter);
+  app.use("/api/caseworker", caseworkerRouter);
   app.use(
     (
       err: unknown,

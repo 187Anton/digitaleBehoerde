@@ -6,12 +6,15 @@ import {
   Service,
   createResidenceChange,
   fetchApplications,
+  fetchCaseworkerApplications,
   fetchCurrentUser,
   fetchServices,
   login,
   logout,
   register,
+  updateApplicationStatus,
 } from "./api";
+import { CaseworkerApplications } from "./CaseworkerApplications";
 import { ResidenceChangeForm } from "./ResidenceChangeForm";
 type Mode = "login" | "register";
 type View = "catalog" | "service-detail" | "applications";
@@ -42,6 +45,12 @@ function App(): JSX.Element {
   }, []);
   useEffect(() => {
     if (!user) {
+      return;
+    }
+    if (user.role === "CASEWORKER") {
+      fetchCaseworkerApplications()
+        .then((response) => setApplications(response.applications))
+        .catch(() => setApplications([]));
       return;
     }
     Promise.all([fetchServices(), fetchApplications()])
@@ -113,6 +122,26 @@ function App(): JSX.Element {
       setIsLoading(false);
     }
   }
+  async function handleStatusChange(
+    applicationId: string,
+    status: "IN_REVIEW" | "APPROVED" | "REJECTED"
+  ) {
+    setIsLoading(true);
+    setMessage("");
+    try {
+      const response = await updateApplicationStatus(applicationId, status);
+      setApplications((current) =>
+        current.map((application) =>
+          application.id === response.application.id ? response.application : application
+        )
+      );
+      setMessage("Antragsstatus wurde aktualisiert.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Status konnte nicht geaendert werden.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
   return (
     <main style={{ fontFamily: "Arial, sans-serif", padding: "40px" }}>
       <h1>Digitale Behörde</h1>
@@ -126,15 +155,17 @@ function App(): JSX.Element {
               Abmelden
             </button>
           </div>
-          <nav style={{ display: "flex", gap: "12px", marginTop: "20px" }}>
-            <button type="button" onClick={backToCatalog}>
-              Antragskatalog
-            </button>
-            <button type="button" onClick={() => setView("applications")}>
-              Meine Antraege ({applications.length})
-            </button>
-          </nav>
-          {view === "catalog" ? (
+          {user.role === "CITIZEN" ? (
+            <nav style={{ display: "flex", gap: "12px", marginTop: "20px" }}>
+              <button type="button" onClick={backToCatalog}>
+                Antragskatalog
+              </button>
+              <button type="button" onClick={() => setView("applications")}>
+                Meine Antraege ({applications.length})
+              </button>
+            </nav>
+          ) : null}
+          {user.role === "CITIZEN" && view === "catalog" ? (
             <section style={{ marginTop: "24px" }}>
               <h2>Antragskatalog</h2>
               <p>Bitte waehlen Sie einen Vorgang.</p>
@@ -165,7 +196,7 @@ function App(): JSX.Element {
               {services.length === 0 ? <p>Vorgaenge werden geladen ...</p> : null}
             </section>
           ) : null}
-          {view === "service-detail" && activeService ? (
+          {user.role === "CITIZEN" && view === "service-detail" && activeService ? (
             <section style={{ marginTop: "24px" }}>
               <button type="button" onClick={backToCatalog} style={{ marginBottom: "16px" }}>
                 Zurueck zum Katalog
@@ -180,7 +211,7 @@ function App(): JSX.Element {
               ) : null}
             </section>
           ) : null}
-          {view === "applications" ? (
+          {user.role === "CITIZEN" && view === "applications" ? (
             <section style={{ marginTop: "24px" }}>
               <h2>Meine Antraege</h2>
               {applications.length === 0 ? <p>Noch keine Antraege eingereicht.</p> : null}
@@ -204,6 +235,13 @@ function App(): JSX.Element {
                 ))}
               </ul>
             </section>
+          ) : null}
+          {user.role === "CASEWORKER" ? (
+            <CaseworkerApplications
+              applications={applications}
+              isUpdating={isLoading}
+              onStatusChange={handleStatusChange}
+            />
           ) : null}
         </section>
       ) : (
