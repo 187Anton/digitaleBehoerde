@@ -13,6 +13,8 @@ dist/
 build/
 uploads/
 .test-uploads/
+playwright-report/
+test-results/
 
 # IDE
 .idea/
