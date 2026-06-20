@@ -139,7 +139,16 @@ jobs:
 
       - name: Deploy frontend to Azure Container App
         run: |
+          BACKEND_FQDN=$(az containerapp show \
+            --name ${{ secrets.AZURE_BACKEND_APP }} \
+            --resource-group ${{ secrets.AZURE_RG }} \
+            --query "properties.configuration.ingress.fqdn" \
+            --output tsv)
+
+          test -n "$BACKEND_FQDN"
+
           az containerapp update \
             --name ${{ secrets.AZURE_FRONTEND_APP }} \
             --resource-group ${{ secrets.AZURE_RG }} \
-            --image ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }} \
+            --set-env-vars "BACKEND_URL=https://$BACKEND_FQDN"
