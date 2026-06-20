@@ -24,6 +24,7 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@database:5432/digitale_behoerde
       - CORS_ORIGIN=http://localhost:3000
       - UPLOAD_DIR=/app/uploads
+      - DOCUMENT_STORAGE=local
     volumes:
       - uploads_data:/app/uploads
 

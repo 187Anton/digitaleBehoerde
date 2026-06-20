@@ -118,6 +118,67 @@ jobs:
               --identity system
           done
 
+      - name: Configure private document storage
+        run: |
+          STORAGE_ACCOUNT=$(echo "${{ secrets.ACR_NAME }}docs" \
+            | tr -cd '[:alnum:]' \
+            | tr '[:upper:]' '[:lower:]' \
+            | cut -c1-24)
+
+          if ! az storage account show \
+            --name "$STORAGE_ACCOUNT" \
+            --resource-group ${{ secrets.AZURE_RG }} >/dev/null 2>&1; then
+            az storage account create \
+              --name "$STORAGE_ACCOUNT" \
+              --resource-group ${{ secrets.AZURE_RG }} \
+              --sku Standard_LRS \
+              --kind StorageV2 \
+              --allow-blob-public-access false \
+              --min-tls-version TLS1_2
+          fi
+
+          STORAGE_ID=$(az storage account show \
+            --name "$STORAGE_ACCOUNT" \
+            --resource-group ${{ secrets.AZURE_RG }} \
+            --query id \
+            --output tsv)
+
+          STORAGE_KEY=$(az storage account keys list \
+            --account-name "$STORAGE_ACCOUNT" \
+            --resource-group ${{ secrets.AZURE_RG }} \
+            --query '[0].value' \
+            --output tsv)
+
+          az storage container create \
+            --name application-documents \
+            --account-name "$STORAGE_ACCOUNT" \
+            --account-key "$STORAGE_KEY" \
+            --public-access off
+
+          unset STORAGE_KEY
+
+          BACKEND_PRINCIPAL_ID=$(az containerapp identity show \
+            --name ${{ secrets.AZURE_BACKEND_APP }} \
+            --resource-group ${{ secrets.AZURE_RG }} \
+            --query principalId \
+            --output tsv)
+
+          ROLE_COUNT=$(az role assignment list \
+            --assignee-object-id "$BACKEND_PRINCIPAL_ID" \
+            --scope "$STORAGE_ID" \
+            --query "[?roleDefinitionName=='Storage Blob Data Contributor'] | length(@)" \
+            --output tsv)
+
+          if [ "$ROLE_COUNT" = "0" ]; then
+            az role assignment create \
+              --assignee-object-id "$BACKEND_PRINCIPAL_ID" \
+              --assignee-principal-type ServicePrincipal \
+              --role "Storage Blob Data Contributor" \
+              --scope "$STORAGE_ID"
+          fi
+
+          echo "DOCUMENT_STORAGE_ACCOUNT=$STORAGE_ACCOUNT" >> "$GITHUB_ENV"
+
       - name: Build backend image
         run: docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }} ./backend
 
@@ -135,7 +196,11 @@ jobs:
           az containerapp update \
             --name ${{ secrets.AZURE_BACKEND_APP }} \
             --resource-group ${{ secrets.AZURE_RG }} \
-            --image ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }} \
+            --set-env-vars \
+              "DOCUMENT_STORAGE=azure" \
+              "AZURE_STORAGE_ACCOUNT=$DOCUMENT_STORAGE_ACCOUNT" \
+              "AZURE_STORAGE_CONTAINER=application-documents"
 
       - name: Deploy frontend to Azure Container App
         run: |

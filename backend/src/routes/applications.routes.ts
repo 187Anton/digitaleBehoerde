@@ -1,8 +1,12 @@
 import { Router } from "express";
 import { unlink } from "node:fs/promises";
-import path from "node:path";
 import { prisma } from "../lib/prisma.js";
-import { env } from "../lib/env.js";
+import {
+  deleteStoredDocument,
+  isDocumentNotFoundError,
+  openStoredDocument,
+  persistUploadedDocument,
+} from "../lib/document-storage.js";
 import {
   documentUpload,
   hasValidDocumentSignature,
@@ -84,6 +88,7 @@ applicationsRouter.post(
       return res.status(400).json({ error: "Dateiinhalt entspricht nicht dem Dateityp" });
     }
     try {
+      await persistUploadedDocument(req.file);
       const document = await prisma.document.create({
         data: {
           applicationId: res.locals.applicationId as string,
@@ -96,13 +101,13 @@ applicationsRouter.post(
       });
       return res.status(201).json({ document });
     } catch (error) {
-      await unlink(req.file.path).catch(() => undefined);
+      await deleteStoredDocument(req.file.filename).catch(() => undefined);
       return next(error);
     }
   }
 );
 
-applicationsRouter.get("/:applicationId/documents/:documentId", async (req, res) => {
+applicationsRouter.get("/:applicationId/documents/:documentId", async (req, res, next) => {
   const document = await prisma.document.findFirst({
     where: {
       id: req.params.documentId,
@@ -117,9 +122,19 @@ applicationsRouter.get("/:applicationId/documents/:documentId", async (req, res)
     return res.status(403).json({ error: "Kein Zugriff auf dieses Dokument" });
   }
 
-  return res.download(path.join(env.uploadDir, document.storedName), document.originalName, (error) => {
-    if (error && !res.headersSent) {
-      res.status(404).json({ error: "Datei nicht gefunden" });
+  try {
+    const storedDocument = await openStoredDocument(document.storedName);
+    res.attachment(document.originalName);
+    res.type(document.mimeType);
+    if (storedDocument.contentLength !== undefined) {
+      res.setHeader("Content-Length", storedDocument.contentLength);
     }
-  });
+    storedDocument.stream.on("error", next);
+    return storedDocument.stream.pipe(res);
+  } catch (error) {
+    if (isDocumentNotFoundError(error)) {
+      return res.status(404).json({ error: "Datei nicht gefunden" });
+    }
+    return next(error);
+  }
 });
