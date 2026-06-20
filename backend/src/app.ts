@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import multer from "multer";
 import { env } from "./lib/env.js";
 import { authRouter } from "./routes/auth.routes.js";
 import { servicesRouter } from "./routes/services.routes.js";
@@ -32,6 +33,12 @@ export function createApp() {
       res: express.Response,
       _next: express.NextFunction
     ) => {
+      if (err instanceof multer.MulterError) {
+        const error = err.code === "LIMIT_FILE_SIZE"
+          ? "Dokument darf maximal 5 MB gross sein."
+          : "Nur PDF-, JPEG- und PNG-Dokumente sind erlaubt.";
+        return res.status(400).json({ error });
+      }
       console.error(err);
       res.status(500).json({ error: "Interner Serverfehler." });
     }

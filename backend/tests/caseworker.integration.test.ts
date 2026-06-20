@@ -65,6 +65,7 @@ describe("Sachbearbeiter-Endpunkte (Integration)", () => {
       status: "SUBMITTED",
       user: { email: citizen.user.email, firstName: "Bea", lastName: "Buerger" },
       residenceChange: { newCity: "Berlin" },
+      documents: [],
     });
   });
 
