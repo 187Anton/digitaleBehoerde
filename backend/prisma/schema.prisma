@@ -47,9 +47,24 @@ model Application {
   updatedAt       DateTime          @updatedAt @map("updated_at")
   user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   residenceChange ResidenceChange?
+  documents       Document[]
 
   @@index([userId, createdAt])
   @@map("applications")
+}
+
+model Document {
+  id            String      @id @default(uuid())
+  applicationId String      @map("application_id")
+  originalName  String      @map("original_name")
+  storedName    String      @unique @map("stored_name")
+  mimeType      String      @map("mime_type")
+  size          Int
+  uploadedAt    DateTime    @default(now()) @map("uploaded_at")
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+  @@map("documents")
 }
 
 model ResidenceChange {

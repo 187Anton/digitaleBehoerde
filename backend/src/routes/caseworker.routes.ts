@@ -3,6 +3,7 @@ import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth, requireRole } from "../middleware/requireAuth.js";
 import { applicationStatusSchema } from "../schemas/application.schema.js";
+import { publicDocumentSelect } from "../lib/upload.js";
 
 export const caseworkerRouter = Router();
 
@@ -16,6 +17,7 @@ const applicationInclude = {
     },
   },
   residenceChange: true,
+  documents: { select: publicDocumentSelect },
 } satisfies Prisma.ApplicationInclude;
 
 const allowedTransitions: Record<ApplicationStatus, ApplicationStatus[]> = {

@@ -3,7 +3,7 @@ import type { ResidenceChangeInput } from "./api";
 
 type Props = {
   isSubmitting: boolean;
-  onSubmit: (data: ResidenceChangeInput) => Promise<void>;
+  onSubmit: (data: ResidenceChangeInput, document: File) => Promise<void>;
 };
 
 const fieldStyle = { display: "block", margin: "6px 0 12px", width: "100%" };
@@ -19,6 +19,7 @@ export function ResidenceChangeForm({ isSubmitting, onSubmit }: Props): JSX.Elem
     newCity: "",
     householdSize: 1,
   });
+  const [document, setDocument] = useState<File | null>(null);
 
   function update<K extends keyof ResidenceChangeInput>(key: K, value: ResidenceChangeInput[K]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -26,7 +27,9 @@ export function ResidenceChangeForm({ isSubmitting, onSubmit }: Props): JSX.Elem
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    await onSubmit(form);
+    if (document) {
+      await onSubmit(form, document);
+    }
   }
 
   return (
@@ -122,6 +125,17 @@ export function ResidenceChangeForm({ isSubmitting, onSubmit }: Props): JSX.Elem
           max={20}
           value={form.householdSize}
           onChange={(event) => update("householdSize", Number(event.target.value))}
+          required
+          style={fieldStyle}
+        />
+      </label>
+
+      <label>
+        Nachweisdokument (PDF, JPEG oder PNG, maximal 5 MB)
+        <input
+          type="file"
+          accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+          onChange={(event) => setDocument(event.target.files?.[0] ?? null)}
           required
           style={fieldStyle}
         />

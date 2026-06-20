@@ -36,6 +36,14 @@ export type ResidenceChangeInput = {
   householdSize: number;
 };
 export type ApplicationStatus = "SUBMITTED" | "IN_REVIEW" | "APPROVED" | "REJECTED";
+export type ApplicationDocument = {
+  id: string;
+  applicationId: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  uploadedAt: string;
+};
 export type Application = {
   id: string;
   type: "RESIDENCE_CHANGE";
@@ -44,6 +52,7 @@ export type Application = {
   createdAt: string;
   updatedAt: string;
   residenceChange: (ResidenceChangeInput & { id: string; applicationId: string }) | null;
+  documents: ApplicationDocument[];
   user?: {
     id: string;
     email: string;
@@ -99,6 +108,29 @@ export function createResidenceChange(
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+export async function uploadApplicationDocument(
+  applicationId: string,
+  file: File
+): Promise<{ document: ApplicationDocument }> {
+  const formData = new FormData();
+  formData.append("document", file);
+  const response = await fetch(
+    `${API_BASE_URL}/api/applications/${encodeURIComponent(applicationId)}/documents`,
+    {
+      method: "POST",
+      credentials: "include",
+      body: formData,
+    }
+  );
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(body?.error ?? "Dokument konnte nicht hochgeladen werden.");
+  }
+  return response.json() as Promise<{ document: ApplicationDocument }>;
+}
+export function applicationDocumentUrl(applicationId: string, documentId: string): string {
+  return `${API_BASE_URL}/api/applications/${encodeURIComponent(applicationId)}/documents/${encodeURIComponent(documentId)}`;
 }
 export function fetchCaseworkerApplications(): Promise<{ applications: Application[] }> {
   return request<{ applications: Application[] }>("/api/caseworker/applications");
