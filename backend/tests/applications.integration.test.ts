@@ -1,8 +1,10 @@
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
+import { readdir, unlink } from "node:fs/promises";
 import request from "supertest";
 import { createApp } from "../src/app.js";
 import { prisma } from "../src/lib/prisma.js";
 import { AUTH_COOKIE, signToken } from "../src/lib/auth.js";
+import { env } from "../src/lib/env.js";
 
 const app = createApp();
 const validPayload = {
@@ -34,6 +36,10 @@ describe("Antrags-Endpunkte (Integration)", () => {
     await prisma.user.deleteMany();
   });
   afterAll(() => prisma.$disconnect());
+  afterEach(async () => {
+    const files = await readdir(env.uploadDir).catch(() => []);
+    await Promise.all(files.map((file) => unlink(`${env.uploadDir}/${file}`)));
+  });
 
   it("legt eine Wohnsitzummeldung mit Status SUBMITTED an", async () => {
     const { user, cookie } = await createUser();
@@ -97,5 +103,113 @@ describe("Antrags-Endpunkte (Integration)", () => {
     expect(res.body.applications).toHaveLength(1);
     expect(res.body.applications[0].userId).toBe(first.user.id);
     expect(res.body.applications[0].residenceChange.newCity).toBe("Berlin");
+  });
+
+  it("laedt ein PDF zu einem eigenen Antrag hoch und wieder herunter", async () => {
+    const { cookie } = await createUser();
+    const created = await request(app)
+      .post("/api/applications/residence-change")
+      .set("Cookie", cookie)
+      .send(validPayload);
+
+    const upload = await request(app)
+      .post(`/api/applications/${created.body.application.id}/documents`)
+      .set("Cookie", cookie)
+      .attach("document", Buffer.from("%PDF-1.4 demo"), {
+        filename: "meldebestaetigung.pdf",
+        contentType: "application/pdf",
+      });
+
+    expect(upload.status).toBe(201);
+    expect(upload.body.document).toMatchObject({
+      originalName: "meldebestaetigung.pdf",
+      mimeType: "application/pdf",
+      size: 13,
+    });
+
+    const download = await request(app)
+      .get(
+        `/api/applications/${created.body.application.id}/documents/${upload.body.document.id}`
+      )
+      .set("Cookie", cookie);
+    expect(download.status).toBe(200);
+    expect(download.headers["content-disposition"]).toContain("meldebestaetigung.pdf");
+  });
+
+  it("lehnt nicht erlaubte Dateitypen ab", async () => {
+    const { cookie } = await createUser();
+    const created = await request(app)
+      .post("/api/applications/residence-change")
+      .set("Cookie", cookie)
+      .send(validPayload);
+
+    const upload = await request(app)
+      .post(`/api/applications/${created.body.application.id}/documents`)
+      .set("Cookie", cookie)
+      .attach("document", Buffer.from("kein dokument"), {
+        filename: "datei.txt",
+        contentType: "text/plain",
+      });
+
+    expect(upload.status).toBe(400);
+    expect(await prisma.document.count()).toBe(0);
+  });
+
+  it("lehnt manipulierte Dateiinhalte ab", async () => {
+    const { cookie } = await createUser();
+    const created = await request(app)
+      .post("/api/applications/residence-change")
+      .set("Cookie", cookie)
+      .send(validPayload);
+
+    const upload = await request(app)
+      .post(`/api/applications/${created.body.application.id}/documents`)
+      .set("Cookie", cookie)
+      .attach("document", Buffer.from("kein echtes PDF"), {
+        filename: "manipuliert.pdf",
+        contentType: "application/pdf",
+      });
+
+    expect(upload.status).toBe(400);
+    expect(await prisma.document.count()).toBe(0);
+  });
+
+  it("lehnt Dokumente ueber 5 MB ab", async () => {
+    const { cookie } = await createUser();
+    const created = await request(app)
+      .post("/api/applications/residence-change")
+      .set("Cookie", cookie)
+      .send(validPayload);
+
+    const upload = await request(app)
+      .post(`/api/applications/${created.body.application.id}/documents`)
+      .set("Cookie", cookie)
+      .attach("document", Buffer.alloc(5 * 1024 * 1024 + 1, 0x25), {
+        filename: "zu-gross.pdf",
+        contentType: "application/pdf",
+      });
+
+    expect(upload.status).toBe(400);
+    expect(await prisma.document.count()).toBe(0);
+  });
+
+  it("verhindert Uploads zu fremden Antraegen", async () => {
+    const owner = await createUser();
+    const stranger = await createUser();
+    const created = await request(app)
+      .post("/api/applications/residence-change")
+      .set("Cookie", owner.cookie)
+      .send(validPayload);
+
+    const upload = await request(app)
+      .post(`/api/applications/${created.body.application.id}/documents`)
+      .set("Cookie", stranger.cookie)
+      .attach("document", Buffer.from("%PDF-1.4 demo"), {
+        filename: "fremd.pdf",
+        contentType: "application/pdf",
+      });
+
+    expect(upload.status).toBe(404);
+    expect(await prisma.document.count()).toBe(0);
   });
 });

@@ -4,6 +4,7 @@ import {
   AuthResponse,
   ResidenceChangeInput,
   Service,
+  applicationDocumentUrl,
   createResidenceChange,
   fetchApplications,
   fetchCaseworkerApplications,
@@ -13,6 +14,7 @@ import {
   logout,
   register,
   updateApplicationStatus,
+  uploadApplicationDocument,
 } from "./api";
 import { CaseworkerApplications } from "./CaseworkerApplications";
 import { ResidenceChangeForm } from "./ResidenceChangeForm";
@@ -107,17 +109,50 @@ function App(): JSX.Element {
     setActiveService(null);
     setView("catalog");
   }
-  async function handleResidenceChange(data: ResidenceChangeInput) {
+  async function handleResidenceChange(data: ResidenceChangeInput, document: File) {
     setIsLoading(true);
     setMessage("");
     try {
       const response = await createResidenceChange(data);
+      try {
+        const uploadResponse = await uploadApplicationDocument(response.application.id, document);
+        response.application.documents = [uploadResponse.document];
+      } catch (error) {
+        setApplications((current) => [response.application, ...current]);
+        setView("applications");
+        setActiveService(null);
+        setMessage(
+          `Antrag wurde angelegt, aber das Dokument fehlt: ${
+            error instanceof Error ? error.message : "Upload fehlgeschlagen."
+          }`
+        );
+        return;
+      }
       setApplications((current) => [response.application, ...current]);
       setView("applications");
       setActiveService(null);
       setMessage("Wohnsitzummeldung wurde erfolgreich eingereicht.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Antrag konnte nicht gesendet werden.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+  async function handleDocumentUpload(applicationId: string, file: File) {
+    setIsLoading(true);
+    setMessage("");
+    try {
+      const response = await uploadApplicationDocument(applicationId, file);
+      setApplications((current) =>
+        current.map((application) =>
+          application.id === applicationId
+            ? { ...application, documents: [...application.documents, response.document] }
+            : application
+        )
+      );
+      setMessage("Dokument wurde hochgeladen.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Dokument konnte nicht hochgeladen werden.");
     } finally {
       setIsLoading(false);
     }
@@ -231,6 +266,41 @@ function App(): JSX.Element {
                         ? ` · Neue Anschrift: ${application.residenceChange.newStreet}, ${application.residenceChange.newPostalCode} ${application.residenceChange.newCity}`
                         : ""}
                     </p>
+                    {application.documents.length > 0 ? (
+                      <ul>
+                        {application.documents.map((document) => (
+                          <li key={document.id}>
+                            <a
+                              href={applicationDocumentUrl(application.id, document.id)}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              {document.originalName}
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p>Kein Dokument vorhanden.</p>
+                    )}
+                    {application.status === "SUBMITTED" ? (
+                      <label>
+                        Weiteres Dokument hochladen
+                        <input
+                          type="file"
+                          accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                          disabled={isLoading}
+                          onChange={(event) => {
+                            const file = event.target.files?.[0];
+                            if (file) {
+                              void handleDocumentUpload(application.id, file);
+                            }
+                            event.target.value = "";
+                          }}
+                          style={{ display: "block", marginTop: "6px" }}
+                        />
+                      </label>
+                    ) : null}
                   </li>
                 ))}
               </ul>

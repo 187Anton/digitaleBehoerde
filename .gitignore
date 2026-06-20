@@ -11,6 +11,8 @@ npm-debug.log
 # Build output
 dist/
 build/
+uploads/
+.test-uploads/
 
 # IDE
 .idea/

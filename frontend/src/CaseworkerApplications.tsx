@@ -1,4 +1,4 @@
-import type { Application, ApplicationStatus } from "./api";
+import { applicationDocumentUrl, type Application, type ApplicationStatus } from "./api";
 
 type NextStatus = Exclude<ApplicationStatus, "SUBMITTED">;
 type Props = {
@@ -61,6 +61,24 @@ export function CaseworkerApplications({
                 <dd>{residence.householdSize}</dd>
               </dl>
             ) : null}
+            <h4>Dokumente</h4>
+            {application.documents.length > 0 ? (
+              <ul>
+                {application.documents.map((document) => (
+                  <li key={document.id}>
+                    <a
+                      href={applicationDocumentUrl(application.id, document.id)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {document.originalName}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>Keine Dokumente vorhanden.</p>
+            )}
             <div style={{ display: "flex", gap: "12px", marginTop: "16px" }}>
               {application.status === "SUBMITTED" ? (
                 <button
