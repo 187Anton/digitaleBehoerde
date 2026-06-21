@@ -40,6 +40,19 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    container_name: digitale-behoerde-prometheus
+    ports:
+      - "9090:9090"
+    depends_on:
+      - backend
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+
 volumes:
   postgres_data:
   uploads_data:
+  prometheus_data:

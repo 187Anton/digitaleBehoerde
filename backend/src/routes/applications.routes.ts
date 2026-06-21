@@ -14,6 +14,7 @@ import {
 } from "../lib/upload.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { residenceChangeSchema } from "../schemas/application.schema.js";
+import { applicationsCreated } from "../lib/metrics.js";
 
 export const applicationsRouter = Router();
 
@@ -56,6 +57,7 @@ applicationsRouter.post("/residence-change", async (req, res) => {
     },
     include: { residenceChange: true, documents: { select: publicDocumentSelect } },
   });
+  applicationsCreated.inc({ type: application.type });
 
   return res.status(201).json({ application });
 });
