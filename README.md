@@ -21,3 +21,16 @@ Web-App zur digitalen Abwicklung ausgewählter Behördengänge.
 - Einfache Sachbearbeiteransicht
 
 - Docker Compose mit Frontend, Backend und Datenbank
+
+## Lokal starten
+
+```bash
+docker compose up --build -d
+docker compose exec backend npx prisma db seed
+```
+
+- Anwendung: http://localhost:3000
+- Backend-Healthcheck: http://localhost:3001/api/health
+- Prometheus: http://localhost:9090
+
+Prometheus überwacht HTTP-Anfragen, Antwortzeiten, Fehler sowie fachliche Antrags- und Statusmetriken. Alarmregeln und Incident-Ablauf sind in [docs/monitoring.md](docs/monitoring.md) beschrieben.

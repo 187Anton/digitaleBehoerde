@@ -7,9 +7,11 @@ import { authRouter } from "./routes/auth.routes.js";
 import { servicesRouter } from "./routes/services.routes.js";
 import { applicationsRouter } from "./routes/applications.routes.js";
 import { caseworkerRouter } from "./routes/caseworker.routes.js";
+import { metricsRegistry, observeHttpRequest } from "./lib/metrics.js";
 
 export function createApp() {
   const app = express();
+  app.use(observeHttpRequest);
   app.use(
     cors({
       origin: env.corsOrigin.split(",").map((o) => o.trim()),
@@ -20,6 +22,14 @@ export function createApp() {
   app.use(cookieParser());
   app.get("/api/health", (_req, res) => {
     res.json({ status: "ok", service: "digitale-behoerde-backend" });
+  });
+  app.get("/metrics", async (_req, res, next) => {
+    try {
+      res.setHeader("Content-Type", metricsRegistry.contentType);
+      return res.send(await metricsRegistry.metrics());
+    } catch (error) {
+      return next(error);
+    }
   });
 
   app.use("/api/auth", authRouter);
