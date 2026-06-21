@@ -4,6 +4,7 @@ import { prisma } from "../lib/prisma.js";
 import { requireAuth, requireRole } from "../middleware/requireAuth.js";
 import { applicationStatusSchema } from "../schemas/application.schema.js";
 import { publicDocumentSelect } from "../lib/upload.js";
+import { applicationStatusChanges } from "../lib/metrics.js";
 
 export const caseworkerRouter = Router();
 
@@ -75,5 +76,6 @@ caseworkerRouter.patch("/applications/:id/status", async (req, res) => {
     where: { id: current.id },
     include: applicationInclude,
   });
+  applicationStatusChanges.inc({ from: current.status, to: application.status });
   return res.json({ application });
 });

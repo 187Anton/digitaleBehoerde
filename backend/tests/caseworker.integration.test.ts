@@ -3,6 +3,7 @@ import request from "supertest";
 import { createApp } from "../src/app.js";
 import { AUTH_COOKIE, signToken } from "../src/lib/auth.js";
 import { prisma } from "../src/lib/prisma.js";
+import { metricsRegistry } from "../src/lib/metrics.js";
 
 const app = createApp();
 
@@ -45,6 +46,7 @@ async function createApplication(userId: string) {
 
 describe("Sachbearbeiter-Endpunkte (Integration)", () => {
   beforeEach(async () => {
+    metricsRegistry.resetMetrics();
     await prisma.application.deleteMany();
     await prisma.user.deleteMany();
   });
@@ -100,6 +102,13 @@ describe("Sachbearbeiter-Endpunkte (Integration)", () => {
       .send({ status: "APPROVED" });
     expect(approve.status).toBe(200);
     expect(approve.body.application.status).toBe("APPROVED");
+    const metrics = await metricsRegistry.metrics();
+    expect(metrics).toContain(
+      'digitale_behoerde_application_status_changes_total{from="SUBMITTED",to="IN_REVIEW",service="digitale-behoerde-backend"} 1'
+    );
+    expect(metrics).toContain(
+      'digitale_behoerde_application_status_changes_total{from="IN_REVIEW",to="APPROVED",service="digitale-behoerde-backend"} 1'
+    );
   });
 
   it("lehnt ungueltige Statusspruenge ab", async () => {

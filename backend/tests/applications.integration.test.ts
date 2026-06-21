@@ -5,6 +5,7 @@ import { createApp } from "../src/app.js";
 import { prisma } from "../src/lib/prisma.js";
 import { AUTH_COOKIE, signToken } from "../src/lib/auth.js";
 import { env } from "../src/lib/env.js";
+import { metricsRegistry } from "../src/lib/metrics.js";
 
 const app = createApp();
 const validPayload = {
@@ -32,6 +33,7 @@ async function createUser(role: "CITIZEN" | "CASEWORKER" = "CITIZEN") {
 
 describe("Antrags-Endpunkte (Integration)", () => {
   beforeEach(async () => {
+    metricsRegistry.resetMetrics();
     await prisma.application.deleteMany();
     await prisma.user.deleteMany();
   });
@@ -59,6 +61,9 @@ describe("Antrags-Endpunkte (Integration)", () => {
       },
     });
     expect(await prisma.application.count()).toBe(1);
+    expect(await metricsRegistry.metrics()).toContain(
+      'digitale_behoerde_applications_created_total{type="RESIDENCE_CHANGE",service="digitale-behoerde-backend"} 1'
+    );
   });
 
   it("lehnt unvollstaendige Meldedaten ab", async () => {

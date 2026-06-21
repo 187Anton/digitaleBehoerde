@@ -1,0 +1,39 @@
+groups:
+  - name: digitale-behoerde
+    rules:
+      - alert: BackendNichtErreichbar
+        expr: up{job="digitale-behoerde-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Backend kann nicht von Prometheus abgefragt werden
+          description: Der Backend-Scrape ist seit mindestens einer Minute nicht erfolgreich.
+
+      - alert: ErhoehteFehlerrate
+        expr: |
+          sum(rate(digitale_behoerde_http_requests_total{status_code=~"5.."}[5m]))
+          /
+          clamp_min(sum(rate(digitale_behoerde_http_requests_total[5m])), 0.001)
+          > 0.05
+          and
+          sum(increase(digitale_behoerde_http_requests_total[5m])) >= 20
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Mehr als 5 Prozent der HTTP-Anfragen schlagen fehl
+          description: Die 5xx-Rate liegt seit mindestens fünf Minuten über dem Grenzwert.
+
+      - alert: LangsameAntworten
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (rate(digitale_behoerde_http_request_duration_seconds_bucket[5m]))
+          ) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 95 Prozent der Anfragen benötigen länger als eine Sekunde
+          description: Die p95-Antwortzeit liegt seit mindestens fünf Minuten über dem Grenzwert.
