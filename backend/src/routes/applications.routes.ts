@@ -13,7 +13,7 @@ import {
   publicDocumentSelect,
 } from "../lib/upload.js";
 import { requireAuth } from "../middleware/requireAuth.js";
-import { residenceChangeSchema } from "../schemas/application.schema.js";
+import { residenceChangeSchema, dogTaxSchema } from "../schemas/application.schema.js";
 import { applicationsCreated } from "../lib/metrics.js";
 
 export const applicationsRouter = Router();
@@ -23,7 +23,11 @@ applicationsRouter.use(requireAuth);
 applicationsRouter.get("/", async (req, res) => {
   const applications = await prisma.application.findMany({
     where: { userId: req.user!.userId },
-    include: { residenceChange: true, documents: { select: publicDocumentSelect } },
+    include: {
+      residenceChange: true,
+      dogTax: true,
+      documents: { select: publicDocumentSelect },
+    },
     orderBy: { createdAt: "desc" },
   });
 
@@ -56,6 +60,41 @@ applicationsRouter.post("/residence-change", async (req, res) => {
       },
     },
     include: { residenceChange: true, documents: { select: publicDocumentSelect } },
+  });
+  applicationsCreated.inc({ type: application.type });
+
+  return res.status(201).json({ application });
+});
+
+applicationsRouter.post("/dog-tax", async (req, res) => {
+  if (req.user!.role !== "CITIZEN") {
+    return res.status(403).json({ error: "Nur Bürger können Anträge stellen" });
+  }
+
+  const parsed = dogTaxSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({
+      error: "Validierung fehlgeschlagen",
+      details: parsed.error.flatten(),
+    });
+  }
+
+  const { dogBirthDate, taxStartDate, ...data } = parsed.data;
+  const application = await prisma.application.create({
+    data: {
+      type: "DOG_TAX",
+      userId: req.user!.userId,
+      dogTax: {
+        create: {
+          ...data,
+          dogBirthDate: dogBirthDate
+            ? new Date(`${dogBirthDate}T00:00:00.000Z`)
+            : null,
+          taxStartDate: new Date(`${taxStartDate}T00:00:00.000Z`),
+        },
+      },
+    },
+    include: { dogTax: true, documents: { select: publicDocumentSelect } },
   });
   applicationsCreated.inc({ type: application.type });
 

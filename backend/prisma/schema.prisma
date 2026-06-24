@@ -16,6 +16,7 @@ enum Role {
 
 enum ApplicationType {
   RESIDENCE_CHANGE
+  DOG_TAX
 }
 
 enum ApplicationStatus {
@@ -47,6 +48,7 @@ model Application {
   updatedAt       DateTime          @updatedAt @map("updated_at")
   user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   residenceChange ResidenceChange?
+  dogTax          DogTax?
   documents       Document[]
 
   @@index([userId, createdAt])
@@ -81,4 +83,20 @@ model ResidenceChange {
   application     Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
   @@map("residence_changes")
+}
+
+model DogTax {
+  id              String      @id @default(uuid())
+  applicationId   String      @unique @map("application_id")
+  dogName         String      @map("dog_name")
+  dogBreed        String?     @map("dog_breed")
+  dogBirthDate    DateTime?   @db.Date @map("dog_birth_date")
+  chipNumber      String?     @map("chip_number")
+  ownerStreet     String      @map("owner_street")
+  ownerPostalCode String      @map("owner_postal_code")
+  ownerCity       String      @map("owner_city")
+  taxStartDate    DateTime    @db.Date @map("tax_start_date")
+  application     Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@map("dog_taxes")
 }

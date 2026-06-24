@@ -11,7 +11,7 @@ const services = [
     type: "DOG_TAX",
     title: "Hundesteuer anmelden",
     description: "Halter- und Hundedaten erfassen und Steuer anmelden.",
-    available: false,
+    available: true,
   },
   {
     type: "CERTIFICATE_OF_CONDUCT",

@@ -18,6 +18,7 @@ const applicationInclude = {
     },
   },
   residenceChange: true,
+  dogTax: true,
   documents: { select: publicDocumentSelect },
 } satisfies Prisma.ApplicationInclude;
 
