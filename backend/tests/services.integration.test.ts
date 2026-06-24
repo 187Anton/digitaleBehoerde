@@ -15,16 +15,13 @@ describe("GET /api/services (Antragskatalog)", () => {
     expect(types).toContain("DOG_TAX");
     expect(types).toContain("CERTIFICATE_OF_CONDUCT");
   });
-  it("markiert nur Wohnsitzummeldung als verfuegbar", async () => {
+  it("markiert Wohnsitz und Hundesteuer als verfügbar, Führungszeugnis nicht", async () => {
     const res = await request(app).get("/api/services");
-    const residence = res.body.services.find(
-      (s: { type: string }) => s.type === "RESIDENCE_CHANGE"
-    );
-    expect(residence.available).toBe(true);
-    const others = res.body.services.filter(
-      (s: { type: string }) => s.type !== "RESIDENCE_CHANGE"
-    );
-    expect(others.every((s: { available: boolean }) => !s.available)).toBe(true);
+    const byType = (t: string) =>
+      res.body.services.find((s: { type: string }) => s.type === t);
+    expect(byType("RESIDENCE_CHANGE").available).toBe(true);
+    expect(byType("DOG_TAX").available).toBe(true);
+    expect(byType("CERTIFICATE_OF_CONDUCT").available).toBe(false);
   });
   it("ist ohne Anmeldung erreichbar", async () => {
     const res = await request(app).get("/api/services");
