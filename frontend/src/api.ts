@@ -35,6 +35,16 @@ export type ResidenceChangeInput = {
   newCity: string;
   householdSize: number;
 };
+export type DogTaxInput = {
+  dogName: string;
+  dogBreed?: string;
+  dogBirthDate?: string;
+  chipNumber?: string;
+  ownerStreet: string;
+  ownerPostalCode: string;
+  ownerCity: string;
+  taxStartDate: string;
+};
 export type ApplicationStatus = "SUBMITTED" | "IN_REVIEW" | "APPROVED" | "REJECTED";
 export type ApplicationDocument = {
   id: string;
@@ -46,12 +56,13 @@ export type ApplicationDocument = {
 };
 export type Application = {
   id: string;
-  type: "RESIDENCE_CHANGE";
+  type: "RESIDENCE_CHANGE" | "DOG_TAX";
   status: ApplicationStatus;
   userId: string;
   createdAt: string;
   updatedAt: string;
   residenceChange: (ResidenceChangeInput & { id: string; applicationId: string }) | null;
+  dogTax: (DogTaxInput & { id: string; applicationId: string }) | null;
   documents: ApplicationDocument[];
   user?: {
     id: string;
@@ -105,6 +116,14 @@ export function createResidenceChange(
   payload: ResidenceChangeInput
 ): Promise<{ application: Application }> {
   return request<{ application: Application }>("/api/applications/residence-change", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+export function createDogTax(
+  payload: DogTaxInput
+): Promise<{ application: Application }> {
+  return request<{ application: Application }>("/api/applications/dog-tax", {
     method: "POST",
     body: JSON.stringify(payload),
   });
