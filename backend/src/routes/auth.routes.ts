@@ -7,6 +7,19 @@ import { isProduction } from "../lib/env.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { loginSchema, registerSchema } from "../schemas/auth.schema.js";
 export const authRouter = Router();
+
+const publicUserSelect = {
+  id: true,
+  email: true,
+  role: true,
+  firstName: true,
+  lastName: true,
+  birthDate: true,
+  birthPlace: true,
+  street: true,
+  postalCode: true,
+  city: true,
+} as const;
 const cookieOptions = {
   httpOnly: true,
   secure: isProduction,
@@ -26,7 +39,7 @@ authRouter.post("/register", async (req, res) => {
   try {
     const user = await prisma.user.create({
       data: { email, passwordHash, firstName, lastName },
-      select: { id: true, email: true, role: true },
+      select: publicUserSelect,
     });
     const token = signToken({ userId: user.id, role: user.role });
     res.cookie(AUTH_COOKIE, token, cookieOptions);
@@ -50,7 +63,11 @@ authRouter.post("/login", async (req, res) => {
   }
   const token = signToken({ userId: user.id, role: user.role });
   res.cookie(AUTH_COOKIE, token, cookieOptions);
-  return res.json({ user: { id: user.id, email: user.email, role: user.role } });
+  const publicUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: publicUserSelect,
+  });
+  return res.json({ user: publicUser });
 });
 authRouter.post("/logout", (_req, res) => {
   res.clearCookie(AUTH_COOKIE);
@@ -59,18 +76,7 @@ authRouter.post("/logout", (_req, res) => {
 authRouter.get("/me", requireAuth, async (req, res) => {
   const user = await prisma.user.findUnique({
     where: { id: req.user!.userId },
-    select: {
-      id: true,
-      email: true,
-      role: true,
-      firstName: true,
-      lastName: true,
-      birthDate: true,
-      birthPlace: true,
-      street: true,
-      postalCode: true,
-      city: true,
-    },
+    select: publicUserSelect,
   });
   if (!user) {
     return res.status(404).json({ error: "Nutzer nicht gefunden" });
