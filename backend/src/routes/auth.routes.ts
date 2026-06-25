@@ -59,7 +59,18 @@ authRouter.post("/logout", (_req, res) => {
 authRouter.get("/me", requireAuth, async (req, res) => {
   const user = await prisma.user.findUnique({
     where: { id: req.user!.userId },
-    select: { id: true, email: true, role: true, firstName: true, lastName: true },
+    select: {
+      id: true,
+      email: true,
+      role: true,
+      firstName: true,
+      lastName: true,
+      birthDate: true,
+      birthPlace: true,
+      street: true,
+      postalCode: true,
+      city: true,
+    },
   });
   if (!user) {
     return res.status(404).json({ error: "Nutzer nicht gefunden" });
