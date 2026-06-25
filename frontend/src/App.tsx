@@ -3,9 +3,11 @@ import {
   Application,
   AuthResponse,
   ResidenceChangeInput,
+  DogTaxInput,
   Service,
   applicationDocumentUrl,
   createResidenceChange,
+  createDogTax,
   fetchApplications,
   fetchCaseworkerApplications,
   fetchCurrentUser,
@@ -18,6 +20,7 @@ import {
 } from "./api";
 import { CaseworkerApplications } from "./CaseworkerApplications";
 import { ResidenceChangeForm } from "./ResidenceChangeForm";
+import { DogTaxForm } from "./DogTaxForm";
 type Mode = "login" | "register";
 type View = "catalog" | "service-detail" | "applications";
 
@@ -138,6 +141,37 @@ function App(): JSX.Element {
       setIsLoading(false);
     }
   }
+  async function handleDogTax(data: DogTaxInput, document: File | null) {
+    setIsLoading(true);
+    setMessage("");
+    try {
+      const response = await createDogTax(data);
+      if (document) {
+        try {
+          const uploadResponse = await uploadApplicationDocument(response.application.id, document);
+          response.application.documents = [uploadResponse.document];
+        } catch (error) {
+          setApplications((current) => [response.application, ...current]);
+          setView("applications");
+          setActiveService(null);
+          setMessage(
+            `Antrag wurde angelegt, aber das Dokument fehlt: ${
+              error instanceof Error ? error.message : "Upload fehlgeschlagen."
+            }`
+          );
+          return;
+        }
+      }
+      setApplications((current) => [response.application, ...current]);
+      setView("applications");
+      setActiveService(null);
+      setMessage("Hundesteuer wurde erfolgreich angemeldet.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Antrag konnte nicht gesendet werden.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
   async function handleDocumentUpload(applicationId: string, file: File) {
     setIsLoading(true);
     setMessage("");
@@ -244,6 +278,12 @@ function App(): JSX.Element {
                   onSubmit={handleResidenceChange}
                 />
               ) : null}
+              {activeService.type === "DOG_TAX" ? (
+                <DogTaxForm
+                  isSubmitting={isLoading}
+                  onSubmit={handleDogTax}
+                />
+              ) : null}
             </section>
           ) : null}
           {user.role === "CITIZEN" && view === "applications" ? (
@@ -257,13 +297,18 @@ function App(): JSX.Element {
                     style={{ border: "1px solid #ccc", padding: "16px", marginBottom: "12px" }}
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", gap: "16px" }}>
-                      <strong>Wohnsitz ummelden</strong>
+                      <strong>
+                        {application.type === "RESIDENCE_CHANGE" ? "Wohnsitz ummelden" : "Hundesteuer anmelden"}
+                      </strong>
                       <span>{statusLabels[application.status]}</span>
                     </div>
                     <p style={{ marginBottom: 0, color: "#555" }}>
                       Eingereicht am {new Date(application.createdAt).toLocaleDateString("de-DE")}
                       {application.residenceChange
                         ? ` · Neue Anschrift: ${application.residenceChange.newStreet}, ${application.residenceChange.newPostalCode} ${application.residenceChange.newCity}`
+                        : ""}
+                      {application.dogTax
+                        ? ` · Hund: ${application.dogTax.dogName}, Steuerbeginn ${new Date(application.dogTax.taxStartDate).toLocaleDateString("de-DE")}`
                         : ""}
                     </p>
                     {application.documents.length > 0 ? (
