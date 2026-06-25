@@ -13,7 +13,11 @@ import {
   publicDocumentSelect,
 } from "../lib/upload.js";
 import { requireAuth } from "../middleware/requireAuth.js";
-import { residenceChangeSchema, dogTaxSchema } from "../schemas/application.schema.js";
+import {
+  certificateOfConductSchema,
+  dogTaxSchema,
+  residenceChangeSchema,
+} from "../schemas/application.schema.js";
 import { applicationsCreated } from "../lib/metrics.js";
 
 export const applicationsRouter = Router();
@@ -26,6 +30,7 @@ applicationsRouter.get("/", async (req, res) => {
     include: {
       residenceChange: true,
       dogTax: true,
+      certificateOfConduct: true,
       documents: { select: publicDocumentSelect },
     },
     orderBy: { createdAt: "desc" },
@@ -95,6 +100,34 @@ applicationsRouter.post("/dog-tax", async (req, res) => {
       },
     },
     include: { dogTax: true, documents: { select: publicDocumentSelect } },
+  });
+  applicationsCreated.inc({ type: application.type });
+
+  return res.status(201).json({ application });
+});
+
+applicationsRouter.post("/certificate-of-conduct", async (req, res) => {
+  if (req.user!.role !== "CITIZEN") {
+    return res.status(403).json({ error: "Nur Bürger können Anträge stellen" });
+  }
+
+  const parsed = certificateOfConductSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({
+      error: "Validierung fehlgeschlagen",
+      details: parsed.error.flatten(),
+    });
+  }
+
+  const application = await prisma.application.create({
+    data: {
+      type: "CERTIFICATE_OF_CONDUCT",
+      userId: req.user!.userId,
+      certificateOfConduct: {
+        create: parsed.data,
+      },
+    },
+    include: { certificateOfConduct: true, documents: { select: publicDocumentSelect } },
   });
   applicationsCreated.inc({ type: application.type });
 

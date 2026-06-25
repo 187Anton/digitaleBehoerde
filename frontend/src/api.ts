@@ -60,6 +60,10 @@ export type DogTaxInput = {
   ownerCity: string;
   taxStartDate: string;
 };
+export type CertificateOfConductInput = {
+  purpose: string;
+  deliveryType: "PRIVATE" | "AUTHORITY";
+};
 export type ApplicationStatus = "SUBMITTED" | "IN_REVIEW" | "APPROVED" | "REJECTED";
 export type ApplicationDocument = {
   id: string;
@@ -71,13 +75,16 @@ export type ApplicationDocument = {
 };
 export type Application = {
   id: string;
-  type: "RESIDENCE_CHANGE" | "DOG_TAX";
+  type: "RESIDENCE_CHANGE" | "DOG_TAX" | "CERTIFICATE_OF_CONDUCT";
   status: ApplicationStatus;
   userId: string;
   createdAt: string;
   updatedAt: string;
   residenceChange: (ResidenceChangeInput & { id: string; applicationId: string }) | null;
   dogTax: (DogTaxInput & { id: string; applicationId: string }) | null;
+  certificateOfConduct:
+    | (CertificateOfConductInput & { id: string; applicationId: string })
+    | null;
   documents: ApplicationDocument[];
   user?: {
     id: string;
@@ -139,6 +146,14 @@ export function createDogTax(
   payload: DogTaxInput
 ): Promise<{ application: Application }> {
   return request<{ application: Application }>("/api/applications/dog-tax", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+export function createCertificateOfConduct(
+  payload: CertificateOfConductInput
+): Promise<{ application: Application }> {
+  return request<{ application: Application }>("/api/applications/certificate-of-conduct", {
     method: "POST",
     body: JSON.stringify(payload),
   });

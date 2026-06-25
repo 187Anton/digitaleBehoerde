@@ -15,13 +15,13 @@ describe("GET /api/services (Antragskatalog)", () => {
     expect(types).toContain("DOG_TAX");
     expect(types).toContain("CERTIFICATE_OF_CONDUCT");
   });
-  it("markiert Wohnsitz und Hundesteuer als verfügbar, Führungszeugnis nicht", async () => {
+  it("markiert alle MVP-Vorgaenge als verfügbar", async () => {
     const res = await request(app).get("/api/services");
     const byType = (t: string) =>
       res.body.services.find((s: { type: string }) => s.type === t);
     expect(byType("RESIDENCE_CHANGE").available).toBe(true);
     expect(byType("DOG_TAX").available).toBe(true);
-    expect(byType("CERTIFICATE_OF_CONDUCT").available).toBe(false);
+    expect(byType("CERTIFICATE_OF_CONDUCT").available).toBe(true);
   });
   it("ist ohne Anmeldung erreichbar", async () => {
     const res = await request(app).get("/api/services");

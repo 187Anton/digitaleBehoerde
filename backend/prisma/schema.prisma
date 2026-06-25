@@ -17,6 +17,7 @@ enum Role {
 enum ApplicationType {
   RESIDENCE_CHANGE
   DOG_TAX
+  CERTIFICATE_OF_CONDUCT
 }
 
 enum ApplicationStatus {
@@ -27,34 +28,35 @@ enum ApplicationStatus {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  passwordHash String   @map("password_hash")
-  role         Role     @default(CITIZEN)
-  firstName     String?  @map("first_name")
-  lastName      String?  @map("last_name")
-  birthDate     DateTime? @db.Date @map("birth_date")
-  birthPlace    String?  @map("birth_place")
-  street        String?
-  postalCode    String?  @map("postal_code")
-  city          String?
-  createdAt     DateTime @default(now()) @map("created_at")
+  id           String        @id @default(uuid())
+  email        String        @unique
+  passwordHash String        @map("password_hash")
+  role         Role          @default(CITIZEN)
+  firstName    String?       @map("first_name")
+  lastName     String?       @map("last_name")
+  birthDate    DateTime?     @map("birth_date") @db.Date
+  birthPlace   String?       @map("birth_place")
+  street       String?
+  postalCode   String?       @map("postal_code")
+  city         String?
+  createdAt    DateTime      @default(now()) @map("created_at")
   applications Application[]
 
   @@map("users")
 }
 
 model Application {
-  id              String            @id @default(uuid())
-  type            ApplicationType
-  status          ApplicationStatus @default(SUBMITTED)
-  userId          String            @map("user_id")
-  createdAt       DateTime          @default(now()) @map("created_at")
-  updatedAt       DateTime          @updatedAt @map("updated_at")
-  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  residenceChange ResidenceChange?
-  dogTax          DogTax?
-  documents       Document[]
+  id                   String                @id @default(uuid())
+  type                 ApplicationType
+  status               ApplicationStatus     @default(SUBMITTED)
+  userId               String                @map("user_id")
+  createdAt            DateTime              @default(now()) @map("created_at")
+  updatedAt            DateTime              @updatedAt @map("updated_at")
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  residenceChange      ResidenceChange?
+  dogTax               DogTax?
+  certificateOfConduct CertificateOfConduct?
+  documents            Document[]
 
   @@index([userId, createdAt])
   @@map("applications")
@@ -75,17 +77,17 @@ model Document {
 }
 
 model ResidenceChange {
-  id              String      @id @default(uuid())
-  applicationId   String      @unique @map("application_id")
-  moveDate        DateTime    @db.Date @map("move_date")
-  oldStreet       String      @map("old_street")
-  oldPostalCode   String      @map("old_postal_code")
-  oldCity         String      @map("old_city")
-  newStreet       String      @map("new_street")
-  newPostalCode   String      @map("new_postal_code")
-  newCity         String      @map("new_city")
-  householdSize   Int         @default(1) @map("household_size")
-  application     Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  id            String      @id @default(uuid())
+  applicationId String      @unique @map("application_id")
+  moveDate      DateTime    @map("move_date") @db.Date
+  oldStreet     String      @map("old_street")
+  oldPostalCode String      @map("old_postal_code")
+  oldCity       String      @map("old_city")
+  newStreet     String      @map("new_street")
+  newPostalCode String      @map("new_postal_code")
+  newCity       String      @map("new_city")
+  householdSize Int         @default(1) @map("household_size")
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
   @@map("residence_changes")
 }
@@ -95,13 +97,23 @@ model DogTax {
   applicationId   String      @unique @map("application_id")
   dogName         String      @map("dog_name")
   dogBreed        String?     @map("dog_breed")
-  dogBirthDate    DateTime?   @db.Date @map("dog_birth_date")
+  dogBirthDate    DateTime?   @map("dog_birth_date") @db.Date
   chipNumber      String?     @map("chip_number")
   ownerStreet     String      @map("owner_street")
   ownerPostalCode String      @map("owner_postal_code")
   ownerCity       String      @map("owner_city")
-  taxStartDate    DateTime    @db.Date @map("tax_start_date")
+  taxStartDate    DateTime    @map("tax_start_date") @db.Date
   application     Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
   @@map("dog_taxes")
+}
+
+model CertificateOfConduct {
+  id            String      @id @default(uuid())
+  applicationId String      @unique @map("application_id")
+  purpose       String
+  deliveryType  String      @map("delivery_type")
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@map("certificate_of_conducts")
 }
