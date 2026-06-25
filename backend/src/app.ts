@@ -7,6 +7,7 @@ import { authRouter } from "./routes/auth.routes.js";
 import { servicesRouter } from "./routes/services.routes.js";
 import { applicationsRouter } from "./routes/applications.routes.js";
 import { caseworkerRouter } from "./routes/caseworker.routes.js";
+import { profileRouter } from "./routes/profile.routes.js";
 import { metricsRegistry, observeHttpRequest } from "./lib/metrics.js";
 
 export function createApp() {
@@ -36,6 +37,7 @@ export function createApp() {
   app.use("/api/services", servicesRouter);
   app.use("/api/applications", applicationsRouter);
   app.use("/api/caseworker", caseworkerRouter);
+  app.use("/api/profile", profileRouter);
   app.use(
     (
       err: unknown,
