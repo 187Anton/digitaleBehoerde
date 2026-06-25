@@ -6,6 +6,21 @@ type AuthUser = {
   role: "CITIZEN" | "CASEWORKER";
   firstName?: string | null;
   lastName?: string | null;
+  birthDate?: string | null;
+  birthPlace?: string | null;
+  street?: string | null;
+  postalCode?: string | null;
+  city?: string | null;
+};
+
+export type ProfileUpdateInput = {
+  firstName?: string;
+  lastName?: string;
+  birthDate?: string;
+  birthPlace?: string;
+  street?: string;
+  postalCode?: string;
+  city?: string;
 };
 export type AuthResponse = {
   user: AuthUser;
@@ -151,6 +166,13 @@ export async function uploadApplicationDocument(
 export function applicationDocumentUrl(applicationId: string, documentId: string): string {
   return `${API_BASE_URL}/api/applications/${encodeURIComponent(applicationId)}/documents/${encodeURIComponent(documentId)}`;
 }
+export function updateProfile(payload: ProfileUpdateInput): Promise<AuthResponse> {
+  return request<AuthResponse>("/api/profile", {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
 export function fetchCaseworkerApplications(): Promise<{ applications: Application[] }> {
   return request<{ applications: Application[] }>("/api/caseworker/applications");
 }

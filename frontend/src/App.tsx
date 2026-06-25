@@ -10,6 +10,7 @@ import {
   createDogTax,
   fetchApplications,
   fetchCaseworkerApplications,
+  updateProfile,
   fetchCurrentUser,
   fetchServices,
   login,
@@ -22,7 +23,7 @@ import { CaseworkerApplications } from "./CaseworkerApplications";
 import { ResidenceChangeForm } from "./ResidenceChangeForm";
 import { DogTaxForm } from "./DogTaxForm";
 type Mode = "login" | "register";
-type View = "catalog" | "service-detail" | "applications";
+type View = "catalog" | "service-detail" | "applications" | "profile";
 
 const statusLabels: Record<Application["status"], string> = {
   SUBMITTED: "Eingereicht",
@@ -191,7 +192,21 @@ function App(): JSX.Element {
       setIsLoading(false);
     }
   }
-  async function handleStatusChange(
+  async function handleProfileUpdate(data: ProfileUpdateInput) {
+    setIsLoading(true);
+    setMessage("");
+    try {
+      const response = await updateProfile(data);
+      setUser(response.user);
+      setMessage("Profil wurde gespeichert.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Profil konnte nicht gespeichert werden.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+    async function handleStatusChange(
     applicationId: string,
     status: "IN_REVIEW" | "APPROVED" | "REJECTED"
   ) {
@@ -231,6 +246,9 @@ function App(): JSX.Element {
               </button>
               <button type="button" onClick={() => setView("applications")}>
                 Meine Antraege ({applications.length})
+              </button>
+              <button type="button" onClick={() => setView("profile")}>
+                Mein Profil
               </button>
             </nav>
           ) : null}
@@ -349,6 +367,18 @@ function App(): JSX.Element {
                   </li>
                 ))}
               </ul>
+            </section>
+          ) : null}
+
+          {user.role === "CITIZEN" && view === "profile" ? (
+            <section style={{ marginTop: "24px" }}>
+              <h2>Mein Profil</h2>
+              <p>Diese Daten werden in Zukunft beim Ausfüllen von Anträgen vorgeschlagen.</p>
+              <ProfileForm
+                user={user}
+                isSubmitting={isLoading}
+                onSubmit={handleProfileUpdate}
+              />
             </section>
           ) : null}
           {user.role === "CASEWORKER" ? (
