@@ -34,3 +34,31 @@ docker compose exec backend npx prisma db seed
 - Prometheus: http://localhost:9090
 
 Prometheus überwacht HTTP-Anfragen, Antwortzeiten, Fehler sowie fachliche Antrags- und Statusmetriken. Alarmregeln und Incident-Ablauf sind in [docs/monitoring.md](docs/monitoring.md) beschrieben.
+
+## Tests lokal ausführen
+
+Frontend:
+
+```bash
+cd frontend
+npm test
+npm run build
+```
+
+Backend-Unit-Tests ohne Datenbank:
+
+```bash
+cd backend
+npx vitest run tests/schema.unit.test.ts tests/dog-tax.unit.test.ts tests/profile.unit.test.ts tests/certificate-of-conduct.unit.test.ts
+```
+
+Backend-Integrationstests benötigen eine PostgreSQL-Testdatenbank:
+
+```bash
+docker compose up -d database
+docker compose exec database createdb -U postgres digitale_behoerde_test
+
+cd backend
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/digitale_behoerde_test" npx prisma migrate deploy
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/digitale_behoerde_test" JWT_SECRET="test-secret" npm test
+```

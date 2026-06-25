@@ -17,7 +17,7 @@ const services = [
     type: "CERTIFICATE_OF_CONDUCT",
     title: "Fuehrungszeugnis beantragen",
     description: "Behoerdliches Fuehrungszeugnis online beantragen.",
-    available: false,
+    available: true,
   },
 ];
 servicesRouter.get("/", (_req, res) => {

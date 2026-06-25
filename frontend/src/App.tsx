@@ -4,10 +4,13 @@ import {
   AuthResponse,
   ResidenceChangeInput,
   DogTaxInput,
+  CertificateOfConductInput,
+  ProfileUpdateInput,
   Service,
   applicationDocumentUrl,
   createResidenceChange,
   createDogTax,
+  createCertificateOfConduct,
   fetchApplications,
   fetchCaseworkerApplications,
   updateProfile,
@@ -22,6 +25,8 @@ import {
 import { CaseworkerApplications } from "./CaseworkerApplications";
 import { ResidenceChangeForm } from "./ResidenceChangeForm";
 import { DogTaxForm } from "./DogTaxForm";
+import { ProfileForm } from "./ProfileForm";
+import { CertificateOfConductForm } from "./CertificateOfConductForm";
 type Mode = "login" | "register";
 type View = "catalog" | "service-detail" | "applications" | "profile";
 
@@ -30,6 +35,11 @@ const statusLabels: Record<Application["status"], string> = {
   IN_REVIEW: "In Bearbeitung",
   APPROVED: "Genehmigt",
   REJECTED: "Abgelehnt",
+};
+const applicationTypeLabels: Record<Application["type"], string> = {
+  RESIDENCE_CHANGE: "Wohnsitz ummelden",
+  DOG_TAX: "Hundesteuer anmelden",
+  CERTIFICATE_OF_CONDUCT: "Führungszeugnis beantragen",
 };
 function App(): JSX.Element {
   const [mode, setMode] = useState<Mode>("login");
@@ -173,6 +183,21 @@ function App(): JSX.Element {
       setIsLoading(false);
     }
   }
+  async function handleCertificateOfConduct(data: CertificateOfConductInput) {
+    setIsLoading(true);
+    setMessage("");
+    try {
+      const response = await createCertificateOfConduct(data);
+      setApplications((current) => [response.application, ...current]);
+      setView("applications");
+      setActiveService(null);
+      setMessage("Führungszeugnis wurde erfolgreich beantragt.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Antrag konnte nicht gesendet werden.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
   async function handleDocumentUpload(applicationId: string, file: File) {
     setIsLoading(true);
     setMessage("");
@@ -302,6 +327,12 @@ function App(): JSX.Element {
                   onSubmit={handleDogTax}
                 />
               ) : null}
+              {activeService.type === "CERTIFICATE_OF_CONDUCT" ? (
+                <CertificateOfConductForm
+                  isSubmitting={isLoading}
+                  onSubmit={handleCertificateOfConduct}
+                />
+              ) : null}
             </section>
           ) : null}
           {user.role === "CITIZEN" && view === "applications" ? (
@@ -315,9 +346,7 @@ function App(): JSX.Element {
                     style={{ border: "1px solid #ccc", padding: "16px", marginBottom: "12px" }}
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", gap: "16px" }}>
-                      <strong>
-                        {application.type === "RESIDENCE_CHANGE" ? "Wohnsitz ummelden" : "Hundesteuer anmelden"}
-                      </strong>
+                      <strong>{applicationTypeLabels[application.type]}</strong>
                       <span>{statusLabels[application.status]}</span>
                     </div>
                     <p style={{ marginBottom: 0, color: "#555" }}>
@@ -327,6 +356,9 @@ function App(): JSX.Element {
                         : ""}
                       {application.dogTax
                         ? ` · Hund: ${application.dogTax.dogName}, Steuerbeginn ${new Date(application.dogTax.taxStartDate).toLocaleDateString("de-DE")}`
+                        : ""}
+                      {application.certificateOfConduct
+                        ? ` · Zweck: ${application.certificateOfConduct.purpose}`
                         : ""}
                     </p>
                     {application.documents.length > 0 ? (

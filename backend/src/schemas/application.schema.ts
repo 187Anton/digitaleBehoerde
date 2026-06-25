@@ -46,6 +46,13 @@ export const dogTaxSchema = z.object({
 
 export type DogTaxInput = z.infer<typeof dogTaxSchema>;
 
+export const certificateOfConductSchema = z.object({
+  purpose: requiredText,
+  deliveryType: z.enum(["PRIVATE", "AUTHORITY"]),
+});
+
+export type CertificateOfConductInput = z.infer<typeof certificateOfConductSchema>;
+
 export const applicationStatusSchema = z.object({
   status: z.enum(["IN_REVIEW", "APPROVED", "REJECTED"]),
 });
