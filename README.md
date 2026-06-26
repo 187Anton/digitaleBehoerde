@@ -35,6 +35,7 @@ docker compose exec backend npx prisma db seed
 
 - Login: buerger@example.com PW: passwort123
 - Login: Sachbearbeiter@example.com PW: passwort123
+- Login: Leon@example.com PW: Leon1234
 
 Prometheus überwacht HTTP-Anfragen, Antwortzeiten, Fehler sowie fachliche Antrags- und Statusmetriken. Alarmregeln und Incident-Ablauf sind in [docs/monitoring.md](docs/monitoring.md) beschrieben.
 
