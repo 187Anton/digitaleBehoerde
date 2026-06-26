@@ -33,6 +33,9 @@ docker compose exec backend npx prisma db seed
 - Backend-Healthcheck: http://localhost:3001/api/health
 - Prometheus: http://localhost:9090
 
+- Login: buerger@example.com PW: passwort123
+- Login: Sachbearbeiter@example.com PW: passwort123
+
 Prometheus überwacht HTTP-Anfragen, Antwortzeiten, Fehler sowie fachliche Antrags- und Statusmetriken. Alarmregeln und Incident-Ablauf sind in [docs/monitoring.md](docs/monitoring.md) beschrieben.
 
 ## Tests lokal ausführen
