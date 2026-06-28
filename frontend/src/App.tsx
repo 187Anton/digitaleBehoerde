@@ -41,6 +41,11 @@ const applicationTypeLabels: Record<Application["type"], string> = {
   DOG_TAX: "Hundesteuer anmelden",
   CERTIFICATE_OF_CONDUCT: "Führungszeugnis beantragen",
 };
+const serviceCategoryLabels: Record<Service["type"], string> = {
+  RESIDENCE_CHANGE: "Meldewesen",
+  DOG_TAX: "Kommunale Steuer",
+  CERTIFICATE_OF_CONDUCT: "Bescheinigung",
+};
 
 const statusClassNames: Record<Application["status"], string> = {
   SUBMITTED: "submitted",
@@ -52,12 +57,17 @@ const statusClassNames: Record<Application["status"], string> = {
 const viewTitles: Record<View, string> = {
   catalog: "Antragskatalog",
   "service-detail": "Antrag stellen",
-  applications: "Meine Antraege",
+  applications: "Meine Anträge",
   profile: "Mein Profil",
 };
 
 function statusClassName(status: Application["status"]): string {
   return `status-pill ${statusClassNames[status]}`;
+}
+
+function documentBadgeLabel(fileName: string): string {
+  const extension = fileName.split(".").pop()?.trim().toUpperCase();
+  return extension && extension.length <= 4 ? extension : "Datei";
 }
 
 function App(): JSX.Element {
@@ -265,7 +275,7 @@ function App(): JSX.Element {
       );
       setMessage("Antragsstatus wurde aktualisiert.");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Status konnte nicht geaendert werden.");
+      setMessage(error instanceof Error ? error.message : "Status konnte nicht geändert werden.");
     } finally {
       setIsLoading(false);
     }
@@ -362,7 +372,7 @@ function App(): JSX.Element {
               type="button"
               onClick={() => setView("applications")}
             >
-              Meine Antraege ({applications.length})
+              Meine Anträge ({applications.length})
             </button>
             <button
               className={`nav-item ${view === "profile" ? "active" : ""}`}
@@ -404,16 +414,16 @@ function App(): JSX.Element {
                 <div className="hero-copy">
                   <span className="eyebrow">Online-Serviceportal</span>
                   <h2>Antragskatalog</h2>
-                  <p>Bitte waehlen Sie einen Vorgang. Verfügbare Leistungen können direkt online eingereicht werden.</p>
+                  <p>Bitte wählen Sie einen Vorgang. Verfügbare Leistungen können direkt online eingereicht werden.</p>
                 </div>
                 <div className="hero-status">
                   <div className="metric">
                     <strong>{services.length}</strong>
-                    <span>Vorgaenge</span>
+                    <span>Vorgänge</span>
                   </div>
                   <div className="metric">
                     <strong>{applications.length}</strong>
-                    <span>Meine Antraege</span>
+                    <span>Meine Anträge</span>
                   </div>
                   <div className="metric">
                     <strong>{completedApplications}</strong>
@@ -436,16 +446,16 @@ function App(): JSX.Element {
                       key={service.type}
                       onClick={() => openService(service)}
                     >
-                      <div className="card-icon">{service.title.slice(0, 1)}</div>
+                      <span className="service-kicker">{serviceCategoryLabels[service.type]}</span>
                       <div className="card-footer">
                         <h3>{service.title}</h3>
-                        {service.available ? null : <span className="status-pill in-review">Bald verfuegbar</span>}
+                        {service.available ? null : <span className="status-pill in-review">Bald verfügbar</span>}
                       </div>
                       <p>{service.description}</p>
                     </li>
                   ))}
                 </ul>
-                {services.length === 0 ? <p className="muted">Vorgaenge werden geladen ...</p> : null}
+                {services.length === 0 ? <p className="muted">Vorgänge werden geladen ...</p> : null}
               </section>
             </>
           ) : null}
@@ -458,7 +468,7 @@ function App(): JSX.Element {
                   <p>{activeService.description}</p>
                 </div>
                 <button className="ghost-button" type="button" onClick={backToCatalog}>
-                  Zurueck zum Katalog
+                  Zurück zum Katalog
                 </button>
               </div>
               {activeService.type === "RESIDENCE_CHANGE" ? (
@@ -477,11 +487,11 @@ function App(): JSX.Element {
             <section className="section">
               <div className="section-header">
                 <div>
-                  <h2>Meine Antraege</h2>
+                  <h2>Meine Anträge</h2>
                   <span>{openApplications} offen, {completedApplications} genehmigt</span>
                 </div>
               </div>
-              {applications.length === 0 ? <p className="muted">Noch keine Antraege eingereicht.</p> : null}
+              {applications.length === 0 ? <p className="muted">Noch keine Anträge eingereicht.</p> : null}
               <ul className="application-list">
                 {applications.map((application) => (
                   <li className="application-row" key={application.id}>
@@ -503,7 +513,7 @@ function App(): JSX.Element {
                         <ul className="document-table">
                           {application.documents.map((document) => (
                             <li className="document-row" key={document.id}>
-                              <div className="doc-icon">PDF</div>
+                              <div className="doc-icon">{documentBadgeLabel(document.originalName)}</div>
                               <a
                                 href={applicationDocumentUrl(application.id, document.id)}
                                 target="_blank"

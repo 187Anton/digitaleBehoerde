@@ -17,7 +17,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
     req.user = verifyToken(token);
     next();
   } catch {
-    res.status(401).json({ error: "Ungueltiges oder abgelaufenes Token" });
+    res.status(401).json({ error: "Ungültiges oder abgelaufenes Token" });
   }
 }
 
