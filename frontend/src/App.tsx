@@ -413,7 +413,7 @@ function App(): JSX.Element {
               <section className="hero-panel">
                 <div className="hero-copy">
                   <span className="eyebrow">Online-Serviceportal</span>
-                  <h2>Antragskatalog</h2>
+                  <h2>Online-Anträge starten</h2>
                   <p>Bitte wählen Sie einen Vorgang. Verfügbare Leistungen können direkt online eingereicht werden.</p>
                 </div>
                 <div className="hero-status">
@@ -487,7 +487,7 @@ function App(): JSX.Element {
             <section className="section">
               <div className="section-header">
                 <div>
-                  <h2>Meine Anträge</h2>
+                  <h2>Antragsübersicht</h2>
                   <span>{openApplications} offen, {completedApplications} genehmigt</span>
                 </div>
               </div>
@@ -558,7 +558,7 @@ function App(): JSX.Element {
                 <div className="avatar">{(user.firstName?.[0] ?? user.email[0]).toUpperCase()}</div>
                 <div>
                   <span className="eyebrow">Bürgerkonto</span>
-                  <h2>Mein Profil</h2>
+                  <h2>Stammdaten</h2>
                   <p>Diese Daten werden in Zukunft beim Ausfüllen von Anträgen vorgeschlagen.</p>
                 </div>
               </section>
