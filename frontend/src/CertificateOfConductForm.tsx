@@ -6,8 +6,6 @@ type Props = {
   onSubmit: (data: CertificateOfConductInput) => Promise<void>;
 };
 
-const fieldStyle = { display: "block", margin: "6px 0 12px", width: "100%" };
-
 export function CertificateOfConductForm({ isSubmitting, onSubmit }: Props): JSX.Element {
   const [form, setForm] = useState<CertificateOfConductInput>({
     purpose: "",
@@ -27,19 +25,18 @@ export function CertificateOfConductForm({ isSubmitting, onSubmit }: Props): JSX
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ maxWidth: "520px", marginTop: "24px" }}>
-      <label>
+    <form className="form-panel" onSubmit={handleSubmit}>
+      <label className="field">
         Zweck des Führungszeugnisses
         <input
           value={form.purpose}
           onChange={(event) => update("purpose", event.target.value)}
           required
           maxLength={120}
-          style={fieldStyle}
         />
       </label>
 
-      <label>
+      <label className="field">
         Zustellung
         <select
           value={form.deliveryType}
@@ -47,16 +44,17 @@ export function CertificateOfConductForm({ isSubmitting, onSubmit }: Props): JSX
             update("deliveryType", event.target.value as CertificateOfConductInput["deliveryType"])
           }
           required
-          style={fieldStyle}
         >
           <option value="PRIVATE">An meine private Anschrift</option>
           <option value="AUTHORITY">Direkt an eine Behörde</option>
         </select>
       </label>
 
-      <button type="submit" disabled={isSubmitting}>
-        {isSubmitting ? "Antrag wird gesendet ..." : "Führungszeugnis beantragen"}
-      </button>
+      <div className="button-row">
+        <button className="primary-button" type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Antrag wird gesendet ..." : "Führungszeugnis beantragen"}
+        </button>
+      </div>
     </form>
   );
 }

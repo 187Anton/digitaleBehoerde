@@ -41,6 +41,25 @@ const applicationTypeLabels: Record<Application["type"], string> = {
   DOG_TAX: "Hundesteuer anmelden",
   CERTIFICATE_OF_CONDUCT: "Führungszeugnis beantragen",
 };
+
+const statusClassNames: Record<Application["status"], string> = {
+  SUBMITTED: "submitted",
+  IN_REVIEW: "in-review",
+  APPROVED: "approved",
+  REJECTED: "rejected",
+};
+
+const viewTitles: Record<View, string> = {
+  catalog: "Antragskatalog",
+  "service-detail": "Antrag stellen",
+  applications: "Meine Antraege",
+  profile: "Mein Profil",
+};
+
+function statusClassName(status: Application["status"]): string {
+  return `status-pill ${statusClassNames[status]}`;
+}
+
 function App(): JSX.Element {
   const [mode, setMode] = useState<Mode>("login");
   const [user, setUser] = useState<AuthResponse["user"] | null>(null);
@@ -231,7 +250,7 @@ function App(): JSX.Element {
     }
   }
 
-    async function handleStatusChange(
+  async function handleStatusChange(
     applicationId: string,
     status: "IN_REVIEW" | "APPROVED" | "REJECTED"
   ) {
@@ -251,151 +270,272 @@ function App(): JSX.Element {
       setIsLoading(false);
     }
   }
+
+  if (!user) {
+    return (
+      <main className="auth-shell">
+        <section className="auth-card">
+          <div className="brand">
+            <div className="brand-mark">DB</div>
+            <div>
+              <strong>Digitale Behörde</strong>
+              <span>Serviceportal</span>
+            </div>
+          </div>
+          <div>
+            <h2>{mode === "login" ? "Login" : "Registrierung"}</h2>
+            <p>Mit Ihrem Konto können Sie Anträge digital einreichen und verfolgen.</p>
+          </div>
+          <form onSubmit={handleSubmit}>
+            <label className="field">
+              E-Mail
+              <input
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                required
+              />
+            </label>
+            <label className="field">
+              Passwort
+              <input
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                required
+              />
+            </label>
+            {mode === "register" ? (
+              <>
+                <label className="field">
+                  Vorname
+                  <input value={firstName} onChange={(event) => setFirstName(event.target.value)} />
+                </label>
+                <label className="field">
+                  Nachname
+                  <input value={lastName} onChange={(event) => setLastName(event.target.value)} />
+                </label>
+              </>
+            ) : null}
+            <button className="primary-button" type="submit" disabled={isLoading}>
+              {mode === "login" ? "Einloggen" : "Registrieren"}
+            </button>
+          </form>
+          <button
+            className="ghost-button"
+            type="button"
+            onClick={() => setMode(mode === "login" ? "register" : "login")}
+          >
+            {mode === "login" ? "Zur Registrierung" : "Zum Login"}
+          </button>
+          {message ? <div className="message-banner">{message}</div> : null}
+        </section>
+      </main>
+    );
+  }
+
+  const topbarTitle = user.role === "CASEWORKER" ? "Antragsbearbeitung" : viewTitles[view];
+  const completedApplications = applications.filter((application) => application.status === "APPROVED").length;
+  const openApplications = applications.filter((application) => application.status !== "APPROVED").length;
+
   return (
-    <main style={{ fontFamily: "Arial, sans-serif", padding: "40px" }}>
-      <h1>Digitale Behörde</h1>
-      {user ? (
-        <section style={{ marginTop: "24px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <p style={{ margin: 0 }}>
+    <div className="app-shell">
+      <aside className="sidebar">
+        <div className="brand">
+          <div className="brand-mark">DB</div>
+          <div>
+            <strong>Digitale Behörde</strong>
+            <span>Serviceportal</span>
+          </div>
+        </div>
+        {user.role === "CITIZEN" ? (
+          <nav className="nav-list" aria-label="Hauptnavigation">
+            <button
+              className={`nav-item ${view === "catalog" || view === "service-detail" ? "active" : ""}`}
+              type="button"
+              onClick={backToCatalog}
+            >
+              Antragskatalog
+            </button>
+            <button
+              className={`nav-item ${view === "applications" ? "active" : ""}`}
+              type="button"
+              onClick={() => setView("applications")}
+            >
+              Meine Antraege ({applications.length})
+            </button>
+            <button
+              className={`nav-item ${view === "profile" ? "active" : ""}`}
+              type="button"
+              onClick={() => setView("profile")}
+            >
+              Mein Profil
+            </button>
+          </nav>
+        ) : null}
+        <div className="sidebar-note">
+          <strong>{user.role === "CASEWORKER" ? "Sachbearbeitung" : "Bürgerkonto"}</strong>
+          <p>{user.email}</p>
+        </div>
+      </aside>
+
+      <div className="workspace">
+        <header className="topbar">
+          <div>
+            <span className="eyebrow">Digitale Behörde</span>
+            <h1>{topbarTitle}</h1>
+            <p>
               Angemeldet als {user.email} ({user.role})
             </p>
-            <button type="button" onClick={handleLogout} disabled={isLoading}>
+          </div>
+          <div className="topbar-actions">
+            <button className="ghost-button" type="button" onClick={handleLogout} disabled={isLoading}>
               Abmelden
             </button>
           </div>
-          {user.role === "CITIZEN" ? (
-            <nav style={{ display: "flex", gap: "12px", marginTop: "20px" }}>
-              <button type="button" onClick={backToCatalog}>
-                Antragskatalog
-              </button>
-              <button type="button" onClick={() => setView("applications")}>
-                Meine Antraege ({applications.length})
-              </button>
-              <button type="button" onClick={() => setView("profile")}>
-                Mein Profil
-              </button>
-            </nav>
-          ) : null}
+        </header>
+
+        <main className="page-frame stack">
+          {message ? <div className="message-banner">{message}</div> : null}
+
           {user.role === "CITIZEN" && view === "catalog" ? (
-            <section style={{ marginTop: "24px" }}>
-              <h2>Antragskatalog</h2>
-              <p>Bitte waehlen Sie einen Vorgang.</p>
-              <ul style={{ listStyle: "none", padding: 0, marginTop: "16px" }}>
-                {services.map((service) => (
-                  <li
-                    key={service.type}
-                    onClick={() => openService(service)}
-                    style={{
-                      border: "1px solid #ccc",
-                      padding: "16px",
-                      marginBottom: "12px",
-                      cursor: service.available ? "pointer" : "not-allowed",
-                      opacity: service.available ? 1 : 0.55,
-                      background: service.available ? "#fff" : "#f5f5f5",
-                    }}
-                  >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <h3 style={{ margin: 0 }}>{service.title}</h3>
-                      {service.available ? null : (
-                        <span style={{ fontSize: "12px", color: "#666" }}>Bald verfuegbar</span>
-                      )}
-                    </div>
-                    <p style={{ margin: "8px 0 0", color: "#444" }}>{service.description}</p>
-                  </li>
-                ))}
-              </ul>
-              {services.length === 0 ? <p>Vorgaenge werden geladen ...</p> : null}
-            </section>
+            <>
+              <section className="hero-panel">
+                <div className="hero-copy">
+                  <span className="eyebrow">Online-Serviceportal</span>
+                  <h2>Antragskatalog</h2>
+                  <p>Bitte waehlen Sie einen Vorgang. Verfügbare Leistungen können direkt online eingereicht werden.</p>
+                </div>
+                <div className="hero-status">
+                  <div className="metric">
+                    <strong>{services.length}</strong>
+                    <span>Vorgaenge</span>
+                  </div>
+                  <div className="metric">
+                    <strong>{applications.length}</strong>
+                    <span>Meine Antraege</span>
+                  </div>
+                  <div className="metric">
+                    <strong>{completedApplications}</strong>
+                    <span>Genehmigt</span>
+                  </div>
+                </div>
+              </section>
+
+              <section className="section">
+                <div className="section-header">
+                  <div>
+                    <h2>Verfügbare Vorgänge</h2>
+                    <span>Starten Sie den passenden Online-Antrag.</span>
+                  </div>
+                </div>
+                <ul className="service-grid">
+                  {services.map((service) => (
+                    <li
+                      className={`service-card ${service.available ? "available" : "unavailable"}`}
+                      key={service.type}
+                      onClick={() => openService(service)}
+                    >
+                      <div className="card-icon">{service.title.slice(0, 1)}</div>
+                      <div className="card-footer">
+                        <h3>{service.title}</h3>
+                        {service.available ? null : <span className="status-pill in-review">Bald verfuegbar</span>}
+                      </div>
+                      <p>{service.description}</p>
+                    </li>
+                  ))}
+                </ul>
+                {services.length === 0 ? <p className="muted">Vorgaenge werden geladen ...</p> : null}
+              </section>
+            </>
           ) : null}
+
           {user.role === "CITIZEN" && view === "service-detail" && activeService ? (
-            <section style={{ marginTop: "24px" }}>
-              <button type="button" onClick={backToCatalog} style={{ marginBottom: "16px" }}>
-                Zurueck zum Katalog
-              </button>
-              <h2>{activeService.title}</h2>
-              <p>{activeService.description}</p>
+            <section className="section">
+              <div className="detail-head">
+                <div>
+                  <h2>{activeService.title}</h2>
+                  <p>{activeService.description}</p>
+                </div>
+                <button className="ghost-button" type="button" onClick={backToCatalog}>
+                  Zurueck zum Katalog
+                </button>
+              </div>
               {activeService.type === "RESIDENCE_CHANGE" ? (
-                <ResidenceChangeForm
-                  isSubmitting={isLoading}
-                  onSubmit={handleResidenceChange}
-                />
+                <ResidenceChangeForm isSubmitting={isLoading} onSubmit={handleResidenceChange} />
               ) : null}
               {activeService.type === "DOG_TAX" ? (
-                <DogTaxForm
-                  isSubmitting={isLoading}
-                  onSubmit={handleDogTax}
-                />
+                <DogTaxForm isSubmitting={isLoading} onSubmit={handleDogTax} />
               ) : null}
               {activeService.type === "CERTIFICATE_OF_CONDUCT" ? (
-                <CertificateOfConductForm
-                  isSubmitting={isLoading}
-                  onSubmit={handleCertificateOfConduct}
-                />
+                <CertificateOfConductForm isSubmitting={isLoading} onSubmit={handleCertificateOfConduct} />
               ) : null}
             </section>
           ) : null}
+
           {user.role === "CITIZEN" && view === "applications" ? (
-            <section style={{ marginTop: "24px" }}>
-              <h2>Meine Antraege</h2>
-              {applications.length === 0 ? <p>Noch keine Antraege eingereicht.</p> : null}
-              <ul style={{ listStyle: "none", padding: 0 }}>
+            <section className="section">
+              <div className="section-header">
+                <div>
+                  <h2>Meine Antraege</h2>
+                  <span>{openApplications} offen, {completedApplications} genehmigt</span>
+                </div>
+              </div>
+              {applications.length === 0 ? <p className="muted">Noch keine Antraege eingereicht.</p> : null}
+              <ul className="application-list">
                 {applications.map((application) => (
-                  <li
-                    key={application.id}
-                    style={{ border: "1px solid #ccc", padding: "16px", marginBottom: "12px" }}
-                  >
-                    <div style={{ display: "flex", justifyContent: "space-between", gap: "16px" }}>
+                  <li className="application-row" key={application.id}>
+                    <div>
                       <strong>{applicationTypeLabels[application.type]}</strong>
-                      <span>{statusLabels[application.status]}</span>
+                      <p>
+                        Eingereicht am {new Date(application.createdAt).toLocaleDateString("de-DE")}
+                        {application.residenceChange
+                          ? ` · Neue Anschrift: ${application.residenceChange.newStreet}, ${application.residenceChange.newPostalCode} ${application.residenceChange.newCity}`
+                          : ""}
+                        {application.dogTax
+                          ? ` · Hund: ${application.dogTax.dogName}, Steuerbeginn ${new Date(application.dogTax.taxStartDate).toLocaleDateString("de-DE")}`
+                          : ""}
+                        {application.certificateOfConduct
+                          ? ` · Zweck: ${application.certificateOfConduct.purpose}`
+                          : ""}
+                      </p>
+                      {application.documents.length > 0 ? (
+                        <ul className="document-table">
+                          {application.documents.map((document) => (
+                            <li className="document-row" key={document.id}>
+                              <div className="doc-icon">PDF</div>
+                              <a
+                                href={applicationDocumentUrl(application.id, document.id)}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                {document.originalName}
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p>Kein Dokument vorhanden.</p>
+                      )}
+                      {application.status === "SUBMITTED" ? (
+                        <label className="field upload-box">
+                          Weiteres Dokument hochladen
+                          <input
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                            disabled={isLoading}
+                            onChange={(event) => {
+                              const file = event.target.files?.[0];
+                              if (file) {
+                                void handleDocumentUpload(application.id, file);
+                              }
+                              event.target.value = "";
+                            }}
+                          />
+                        </label>
+                      ) : null}
                     </div>
-                    <p style={{ marginBottom: 0, color: "#555" }}>
-                      Eingereicht am {new Date(application.createdAt).toLocaleDateString("de-DE")}
-                      {application.residenceChange
-                        ? ` · Neue Anschrift: ${application.residenceChange.newStreet}, ${application.residenceChange.newPostalCode} ${application.residenceChange.newCity}`
-                        : ""}
-                      {application.dogTax
-                        ? ` · Hund: ${application.dogTax.dogName}, Steuerbeginn ${new Date(application.dogTax.taxStartDate).toLocaleDateString("de-DE")}`
-                        : ""}
-                      {application.certificateOfConduct
-                        ? ` · Zweck: ${application.certificateOfConduct.purpose}`
-                        : ""}
-                    </p>
-                    {application.documents.length > 0 ? (
-                      <ul>
-                        {application.documents.map((document) => (
-                          <li key={document.id}>
-                            <a
-                              href={applicationDocumentUrl(application.id, document.id)}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              {document.originalName}
-                            </a>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p>Kein Dokument vorhanden.</p>
-                    )}
-                    {application.status === "SUBMITTED" ? (
-                      <label>
-                        Weiteres Dokument hochladen
-                        <input
-                          type="file"
-                          accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-                          disabled={isLoading}
-                          onChange={(event) => {
-                            const file = event.target.files?.[0];
-                            if (file) {
-                              void handleDocumentUpload(application.id, file);
-                            }
-                            event.target.value = "";
-                          }}
-                          style={{ display: "block", marginTop: "6px" }}
-                        />
-                      </label>
-                    ) : null}
+                    <span className={statusClassName(application.status)}>{statusLabels[application.status]}</span>
                   </li>
                 ))}
               </ul>
@@ -403,16 +543,21 @@ function App(): JSX.Element {
           ) : null}
 
           {user.role === "CITIZEN" && view === "profile" ? (
-            <section style={{ marginTop: "24px" }}>
-              <h2>Mein Profil</h2>
-              <p>Diese Daten werden in Zukunft beim Ausfüllen von Anträgen vorgeschlagen.</p>
-              <ProfileForm
-                user={user}
-                isSubmitting={isLoading}
-                onSubmit={handleProfileUpdate}
-              />
-            </section>
+            <>
+              <section className="profile-hero">
+                <div className="avatar">{(user.firstName?.[0] ?? user.email[0]).toUpperCase()}</div>
+                <div>
+                  <span className="eyebrow">Bürgerkonto</span>
+                  <h2>Mein Profil</h2>
+                  <p>Diese Daten werden in Zukunft beim Ausfüllen von Anträgen vorgeschlagen.</p>
+                </div>
+              </section>
+              <section className="section">
+                <ProfileForm user={user} isSubmitting={isLoading} onSubmit={handleProfileUpdate} />
+              </section>
+            </>
           ) : null}
+
           {user.role === "CASEWORKER" ? (
             <CaseworkerApplications
               applications={applications}
@@ -420,66 +565,9 @@ function App(): JSX.Element {
               onStatusChange={handleStatusChange}
             />
           ) : null}
-        </section>
-      ) : (
-        <section style={{ marginTop: "24px", maxWidth: "360px" }}>
-          <h2>{mode === "login" ? "Login" : "Registrierung"}</h2>
-          <form onSubmit={handleSubmit}>
-            <label>
-              E-Mail
-              <input
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                required
-                style={{ display: "block", margin: "6px 0 12px", width: "100%" }}
-              />
-            </label>
-            <label>
-              Passwort
-              <input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                required
-                style={{ display: "block", margin: "6px 0 12px", width: "100%" }}
-              />
-            </label>
-            {mode === "register" ? (
-              <>
-                <label>
-                  Vorname
-                  <input
-                    value={firstName}
-                    onChange={(event) => setFirstName(event.target.value)}
-                    style={{ display: "block", margin: "6px 0 12px", width: "100%" }}
-                  />
-                </label>
-                <label>
-                  Nachname
-                  <input
-                    value={lastName}
-                    onChange={(event) => setLastName(event.target.value)}
-                    style={{ display: "block", margin: "6px 0 12px", width: "100%" }}
-                  />
-                </label>
-              </>
-            ) : null}
-            <button type="submit" disabled={isLoading}>
-              {mode === "login" ? "Einloggen" : "Registrieren"}
-            </button>
-          </form>
-          <button
-            type="button"
-            onClick={() => setMode(mode === "login" ? "register" : "login")}
-            style={{ marginTop: "12px" }}
-          >
-            {mode === "login" ? "Zur Registrierung" : "Zum Login"}
-          </button>
-        </section>
-      )}
-      {message ? <p style={{ marginTop: "16px" }}>{message}</p> : null}
-    </main>
+        </main>
+      </div>
+    </div>
   );
 }
 export default App;

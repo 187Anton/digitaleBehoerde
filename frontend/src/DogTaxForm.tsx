@@ -6,8 +6,6 @@ type Props = {
   onSubmit: (data: DogTaxInput, document: File | null) => Promise<void>;
 };
 
-const fieldStyle = { display: "block", margin: "6px 0 12px", width: "100%" };
-
 export function DogTaxForm({ isSubmitting, onSubmit }: Props): JSX.Element {
   const [form, setForm] = useState<DogTaxInput>({
     dogName: "",
@@ -41,110 +39,107 @@ export function DogTaxForm({ isSubmitting, onSubmit }: Props): JSX.Element {
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ maxWidth: "520px", marginTop: "24px" }}>
-      <fieldset style={{ margin: "20px 0", padding: "16px" }}>
+    <form className="form-panel" onSubmit={handleSubmit}>
+      <fieldset className="form-fieldset">
         <legend>Angaben zum Hund</legend>
-        <label>
-          Name des Hundes
-          <input
-            value={form.dogName}
-            onChange={(event) => update("dogName", event.target.value)}
-            required
-            maxLength={120}
-            style={fieldStyle}
-          />
-        </label>
-        <label>
-          Rasse (optional)
-          <input
-            value={form.dogBreed ?? ""}
-            onChange={(event) => update("dogBreed", event.target.value)}
-            maxLength={120}
-            style={fieldStyle}
-          />
-        </label>
-        <label>
-          Geburtsdatum (optional)
-          <input
-            type="date"
-            value={form.dogBirthDate ?? ""}
-            onChange={(event) => update("dogBirthDate", event.target.value)}
-            style={fieldStyle}
-          />
-        </label>
-        <label>
-          Chipnummer (optional, 15 Ziffern)
-          <input
-            value={form.chipNumber ?? ""}
-            onChange={(event) => update("chipNumber", event.target.value)}
-            inputMode="numeric"
-            pattern="[0-9]{15}"
-            maxLength={15}
-            style={fieldStyle}
-          />
-        </label>
+        <div className="form-grid">
+          <label className="field">
+            Name des Hundes
+            <input
+              value={form.dogName}
+              onChange={(event) => update("dogName", event.target.value)}
+              required
+              maxLength={120}
+            />
+          </label>
+          <label className="field">
+            Rasse (optional)
+            <input
+              value={form.dogBreed ?? ""}
+              onChange={(event) => update("dogBreed", event.target.value)}
+              maxLength={120}
+            />
+          </label>
+          <label className="field">
+            Geburtsdatum (optional)
+            <input
+              type="date"
+              value={form.dogBirthDate ?? ""}
+              onChange={(event) => update("dogBirthDate", event.target.value)}
+            />
+          </label>
+          <label className="field">
+            Chipnummer (optional, 15 Ziffern)
+            <input
+              value={form.chipNumber ?? ""}
+              onChange={(event) => update("chipNumber", event.target.value)}
+              inputMode="numeric"
+              pattern="[0-9]{15}"
+              maxLength={15}
+            />
+          </label>
+        </div>
       </fieldset>
 
-      <fieldset style={{ margin: "20px 0", padding: "16px" }}>
+      <fieldset className="form-fieldset">
         <legend>Anschrift des Halters</legend>
-        <label>
-          Straße und Hausnummer
-          <input
-            value={form.ownerStreet}
-            onChange={(event) => update("ownerStreet", event.target.value)}
-            required
-            maxLength={120}
-            style={fieldStyle}
-          />
-        </label>
-        <label>
-          Postleitzahl
-          <input
-            value={form.ownerPostalCode}
-            onChange={(event) => update("ownerPostalCode", event.target.value)}
-            required
-            inputMode="numeric"
-            pattern="[0-9]{5}"
-            maxLength={5}
-            style={fieldStyle}
-          />
-        </label>
-        <label>
-          Ort
-          <input
-            value={form.ownerCity}
-            onChange={(event) => update("ownerCity", event.target.value)}
-            required
-            maxLength={120}
-            style={fieldStyle}
-          />
-        </label>
+        <div className="form-grid">
+          <label className="field">
+            Straße und Hausnummer
+            <input
+              value={form.ownerStreet}
+              onChange={(event) => update("ownerStreet", event.target.value)}
+              required
+              maxLength={120}
+            />
+          </label>
+          <label className="field">
+            Postleitzahl
+            <input
+              value={form.ownerPostalCode}
+              onChange={(event) => update("ownerPostalCode", event.target.value)}
+              required
+              inputMode="numeric"
+              pattern="[0-9]{5}"
+              maxLength={5}
+            />
+          </label>
+          <label className="field">
+            Ort
+            <input
+              value={form.ownerCity}
+              onChange={(event) => update("ownerCity", event.target.value)}
+              required
+              maxLength={120}
+            />
+          </label>
+        </div>
       </fieldset>
 
-      <label>
+      <label className="field">
         Gewünschter Steuerbeginn
         <input
           type="date"
           value={form.taxStartDate}
           onChange={(event) => update("taxStartDate", event.target.value)}
           required
-          style={fieldStyle}
         />
       </label>
 
-      <label>
+      <label className="field upload-box">
         Nachweisdokument (optional, PDF, JPEG oder PNG, maximal 5 MB)
         <input
           type="file"
           accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
           onChange={(event) => setDocument(event.target.files?.[0] ?? null)}
-          style={fieldStyle}
         />
       </label>
 
-      <button type="submit" disabled={isSubmitting}>
-        {isSubmitting ? "Antrag wird gesendet ..." : "Hundesteuer anmelden"}
-      </button>
+      <div className="button-row">
+        <button className="primary-button" type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Antrag wird gesendet ..." : "Hundesteuer anmelden"}
+        </button>
+      </div>
     </form>
   );
 }

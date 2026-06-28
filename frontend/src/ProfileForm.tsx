@@ -7,8 +7,6 @@ type Props = {
   onSubmit: (data: ProfileUpdateInput) => Promise<void>;
 };
 
-const fieldStyle = { display: "block", margin: "6px 0 12px", width: "100%" };
-
 export function ProfileForm({ user, isSubmitting, onSubmit }: Props): JSX.Element {
   const [form, setForm] = useState({
     firstName: user.firstName ?? "",
@@ -38,83 +36,82 @@ export function ProfileForm({ user, isSubmitting, onSubmit }: Props): JSX.Elemen
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ maxWidth: "520px", marginTop: "24px" }}>
-      <fieldset style={{ margin: "20px 0", padding: "16px" }}>
+    <form className="form-panel" onSubmit={handleSubmit}>
+      <fieldset className="form-fieldset">
         <legend>Persönliche Daten</legend>
-        <label>
-          Vorname
-          <input
-            value={form.firstName}
-            onChange={(event) => update("firstName", event.target.value)}
-            maxLength={120}
-            style={fieldStyle}
-          />
-        </label>
-        <label>
-          Nachname
-          <input
-            value={form.lastName}
-            onChange={(event) => update("lastName", event.target.value)}
-            maxLength={120}
-            style={fieldStyle}
-          />
-        </label>
-        <label>
-          Geburtsdatum
-          <input
-            type="date"
-            value={form.birthDate}
-            onChange={(event) => update("birthDate", event.target.value)}
-            style={fieldStyle}
-          />
-        </label>
-        <label>
-          Geburtsort
-          <input
-            value={form.birthPlace}
-            onChange={(event) => update("birthPlace", event.target.value)}
-            maxLength={120}
-            style={fieldStyle}
-          />
-        </label>
+        <div className="form-grid">
+          <label className="field">
+            Vorname
+            <input
+              value={form.firstName}
+              onChange={(event) => update("firstName", event.target.value)}
+              maxLength={120}
+            />
+          </label>
+          <label className="field">
+            Nachname
+            <input
+              value={form.lastName}
+              onChange={(event) => update("lastName", event.target.value)}
+              maxLength={120}
+            />
+          </label>
+          <label className="field">
+            Geburtsdatum
+            <input
+              type="date"
+              value={form.birthDate}
+              onChange={(event) => update("birthDate", event.target.value)}
+            />
+          </label>
+          <label className="field">
+            Geburtsort
+            <input
+              value={form.birthPlace}
+              onChange={(event) => update("birthPlace", event.target.value)}
+              maxLength={120}
+            />
+          </label>
+        </div>
       </fieldset>
 
-      <fieldset style={{ margin: "20px 0", padding: "16px" }}>
+      <fieldset className="form-fieldset">
         <legend>Anschrift</legend>
-        <label>
-          Straße und Hausnummer
-          <input
-            value={form.street}
-            onChange={(event) => update("street", event.target.value)}
-            maxLength={120}
-            style={fieldStyle}
-          />
-        </label>
-        <label>
-          Postleitzahl
-          <input
-            value={form.postalCode}
-            onChange={(event) => update("postalCode", event.target.value)}
-            inputMode="numeric"
-            pattern="[0-9]{5}"
-            maxLength={5}
-            style={fieldStyle}
-          />
-        </label>
-        <label>
-          Ort
-          <input
-            value={form.city}
-            onChange={(event) => update("city", event.target.value)}
-            maxLength={120}
-            style={fieldStyle}
-          />
-        </label>
+        <div className="form-grid">
+          <label className="field">
+            Straße und Hausnummer
+            <input
+              value={form.street}
+              onChange={(event) => update("street", event.target.value)}
+              maxLength={120}
+            />
+          </label>
+          <label className="field">
+            Postleitzahl
+            <input
+              value={form.postalCode}
+              onChange={(event) => update("postalCode", event.target.value)}
+              inputMode="numeric"
+              pattern="[0-9]{5}"
+              maxLength={5}
+            />
+          </label>
+          <label className="field">
+            Ort
+            <input
+              value={form.city}
+              onChange={(event) => update("city", event.target.value)}
+              maxLength={120}
+            />
+          </label>
+        </div>
       </fieldset>
 
-      <button type="submit" disabled={isSubmitting}>
-        {isSubmitting ? "Wird gespeichert ..." : "Profil speichern"}
-      </button>
+      <div className="button-row">
+        <button className="primary-button" type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Wird gespeichert ..." : "Profil speichern"}
+        </button>
+      </div>
     </form>
   );
 }
