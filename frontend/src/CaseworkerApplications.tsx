@@ -25,15 +25,31 @@ const deliveryTypeLabels: Record<NonNullable<Application["certificateOfConduct"]
   AUTHORITY: "Behörde",
 };
 
+const statusClassNames: Record<ApplicationStatus, string> = {
+  SUBMITTED: "submitted",
+  IN_REVIEW: "in-review",
+  APPROVED: "approved",
+  REJECTED: "rejected",
+};
+
+function statusClassName(status: ApplicationStatus): string {
+  return `status-pill ${statusClassNames[status]}`;
+}
+
 export function CaseworkerApplications({
   applications,
   isUpdating,
   onStatusChange,
 }: Props): JSX.Element {
   return (
-    <section style={{ marginTop: "24px" }}>
-      <h2>Antragsbearbeitung</h2>
-      {applications.length === 0 ? <p>Keine Antraege vorhanden.</p> : null}
+    <section className="section stack">
+      <div className="section-header">
+        <div>
+          <h2>Antragsbearbeitung</h2>
+          <span>{applications.length} Antraege im Arbeitskorb</span>
+        </div>
+      </div>
+      {applications.length === 0 ? <p className="muted">Keine Antraege vorhanden.</p> : null}
       {applications.map((application) => {
         const residence = application.residenceChange;
         const dogTax = application.dogTax;
@@ -43,13 +59,10 @@ export function CaseworkerApplications({
           .join(" ");
 
         return (
-          <article
-            key={application.id}
-            style={{ border: "1px solid #ccc", padding: "20px", marginBottom: "16px" }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", gap: "16px" }}>
-              <h3 style={{ marginTop: 0 }}>{applicationTypeLabels[application.type]}</h3>
-              <strong>{statusLabels[application.status]}</strong>
+          <article className="status-card caseworker-card" key={application.id}>
+            <div className="status-card-head">
+              <h3>{applicationTypeLabels[application.type]}</h3>
+              <strong className={statusClassName(application.status)}>{statusLabels[application.status]}</strong>
             </div>
             <p>
               Antragsteller: {citizenName || application.user?.email || "Unbekannt"}
@@ -59,7 +72,7 @@ export function CaseworkerApplications({
               Eingereicht am {new Date(application.createdAt).toLocaleDateString("de-DE")}
             </p>
             {residence ? (
-              <dl>
+              <dl className="detail-list">
                 <dt>Bisherige Anschrift</dt>
                 <dd>
                   {residence.oldStreet}, {residence.oldPostalCode} {residence.oldCity}
@@ -75,7 +88,7 @@ export function CaseworkerApplications({
               </dl>
             ) : null}
             {dogTax ? (
-              <dl>
+              <dl className="detail-list">
                 <dt>Hund</dt>
                 <dd>
                   {dogTax.dogName}
@@ -90,7 +103,7 @@ export function CaseworkerApplications({
               </dl>
             ) : null}
             {certificate ? (
-              <dl>
+              <dl className="detail-list">
                 <dt>Zweck</dt>
                 <dd>{certificate.purpose}</dd>
                 <dt>Zustellung</dt>
@@ -99,9 +112,10 @@ export function CaseworkerApplications({
             ) : null}
             <h4>Dokumente</h4>
             {application.documents.length > 0 ? (
-              <ul>
+              <ul className="document-table">
                 {application.documents.map((document) => (
-                  <li key={document.id}>
+                  <li className="document-row" key={document.id}>
+                    <div className="doc-icon">PDF</div>
                     <a
                       href={applicationDocumentUrl(application.id, document.id)}
                       target="_blank"
@@ -115,9 +129,10 @@ export function CaseworkerApplications({
             ) : (
               <p>Keine Dokumente vorhanden.</p>
             )}
-            <div style={{ display: "flex", gap: "12px", marginTop: "16px" }}>
+            <div className="button-row">
               {application.status === "SUBMITTED" ? (
                 <button
+                  className="primary-button"
                   type="button"
                   disabled={isUpdating}
                   onClick={() => onStatusChange(application.id, "IN_REVIEW")}
@@ -128,6 +143,7 @@ export function CaseworkerApplications({
               {application.status === "IN_REVIEW" ? (
                 <>
                   <button
+                    className="primary-button"
                     type="button"
                     disabled={isUpdating}
                     onClick={() => onStatusChange(application.id, "APPROVED")}
@@ -135,6 +151,7 @@ export function CaseworkerApplications({
                     Genehmigen
                   </button>
                   <button
+                    className="ghost-button"
                     type="button"
                     disabled={isUpdating}
                     onClick={() => onStatusChange(application.id, "REJECTED")}
