@@ -20,7 +20,7 @@ function useAzureStorage() {
 
 function getContainerClient() {
   if (!env.azureStorageAccount) {
-    throw new Error("AZURE_STORAGE_ACCOUNT fehlt fuer den Azure-Dokumentenspeicher");
+    throw new Error("AZURE_STORAGE_ACCOUNT fehlt für den Azure-Dokumentenspeicher");
   }
   blobServiceClient ??= new BlobServiceClient(
     `https://${env.azureStorageAccount}.blob.core.windows.net`,

@@ -36,6 +36,11 @@ function statusClassName(status: ApplicationStatus): string {
   return `status-pill ${statusClassNames[status]}`;
 }
 
+function documentBadgeLabel(fileName: string): string {
+  const extension = fileName.split(".").pop()?.trim().toUpperCase();
+  return extension && extension.length <= 4 ? extension : "Datei";
+}
+
 export function CaseworkerApplications({
   applications,
   isUpdating,
@@ -46,10 +51,10 @@ export function CaseworkerApplications({
       <div className="section-header">
         <div>
           <h2>Antragsbearbeitung</h2>
-          <span>{applications.length} Antraege im Arbeitskorb</span>
+          <span>{applications.length} Anträge im Arbeitskorb</span>
         </div>
       </div>
-      {applications.length === 0 ? <p className="muted">Keine Antraege vorhanden.</p> : null}
+      {applications.length === 0 ? <p className="muted">Keine Anträge vorhanden.</p> : null}
       {applications.map((application) => {
         const residence = application.residenceChange;
         const dogTax = application.dogTax;
@@ -115,7 +120,7 @@ export function CaseworkerApplications({
               <ul className="document-table">
                 {application.documents.map((document) => (
                   <li className="document-row" key={document.id}>
-                    <div className="doc-icon">PDF</div>
+                    <div className="doc-icon">{documentBadgeLabel(document.originalName)}</div>
                     <a
                       href={applicationDocumentUrl(application.id, document.id)}
                       target="_blank"

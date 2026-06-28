@@ -46,7 +46,7 @@ export function ResidenceChangeForm({ isSubmitting, onSubmit }: Props): JSX.Elem
         <legend>Bisherige Anschrift</legend>
         <div className="form-grid">
           <label className="field">
-            Strasse und Hausnummer
+            Straße und Hausnummer
             <input
               value={form.oldStreet}
               onChange={(event) => update("oldStreet", event.target.value)}
@@ -81,7 +81,7 @@ export function ResidenceChangeForm({ isSubmitting, onSubmit }: Props): JSX.Elem
         <legend>Neue Anschrift</legend>
         <div className="form-grid">
           <label className="field">
-            Strasse und Hausnummer
+            Straße und Hausnummer
             <input
               value={form.newStreet}
               onChange={(event) => update("newStreet", event.target.value)}

@@ -26,14 +26,14 @@ const httpRequestDuration = new Histogram({
 
 export const applicationsCreated = new Counter({
   name: "digitale_behoerde_applications_created_total",
-  help: "Anzahl neu eingereichter Antraege.",
+  help: "Anzahl neu eingereichter Anträge.",
   labelNames: ["type"] as const,
   registers: [metricsRegistry],
 });
 
 export const applicationStatusChanges = new Counter({
   name: "digitale_behoerde_application_status_changes_total",
-  help: "Anzahl erfolgreicher Statuswechsel von Antraegen.",
+  help: "Anzahl erfolgreicher Statuswechsel von Anträgen.",
   labelNames: ["from", "to"] as const,
   registers: [metricsRegistry],
 });
