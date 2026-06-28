@@ -54,7 +54,7 @@ caseworkerRouter.get("/applications/:id", async (req, res) => {
 caseworkerRouter.patch("/applications/:id/status", async (req, res) => {
   const parsed = applicationStatusSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: "Ungueltiger Status" });
+    return res.status(400).json({ error: "Ungültiger Status" });
   }
 
   const current = await prisma.application.findUnique({ where: { id: req.params.id } });

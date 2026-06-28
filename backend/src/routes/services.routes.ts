@@ -15,8 +15,8 @@ const services = [
   },
   {
     type: "CERTIFICATE_OF_CONDUCT",
-    title: "Fuehrungszeugnis beantragen",
-    description: "Behoerdliches Fuehrungszeugnis online beantragen.",
+    title: "Führungszeugnis beantragen",
+    description: "Behördliches Führungszeugnis online beantragen.",
     available: true,
   },
 ];

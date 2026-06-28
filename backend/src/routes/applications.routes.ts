@@ -41,7 +41,7 @@ applicationsRouter.get("/", async (req, res) => {
 
 applicationsRouter.post("/residence-change", async (req, res) => {
   if (req.user!.role !== "CITIZEN") {
-    return res.status(403).json({ error: "Nur Buerger koennen Antraege stellen" });
+    return res.status(403).json({ error: "Nur Bürger können Anträge stellen" });
   }
 
   const parsed = residenceChangeSchema.safeParse(req.body);
@@ -138,7 +138,7 @@ applicationsRouter.post(
   "/:id/documents",
   async (req, res, next) => {
     if (req.user!.role !== "CITIZEN") {
-      return res.status(403).json({ error: "Nur Buerger koennen Dokumente hochladen" });
+      return res.status(403).json({ error: "Nur Bürger können Dokumente hochladen" });
     }
     const application = await prisma.application.findFirst({
       where: { id: req.params.id, userId: req.user!.userId },
@@ -147,7 +147,7 @@ applicationsRouter.post(
       return res.status(404).json({ error: "Antrag nicht gefunden" });
     }
     if (application.status !== "SUBMITTED") {
-      return res.status(409).json({ error: "Dokumente koennen nicht mehr hinzugefuegt werden" });
+      return res.status(409).json({ error: "Dokumente können nicht mehr hinzugefügt werden" });
     }
     res.locals.applicationId = application.id;
     return next();
@@ -155,7 +155,7 @@ applicationsRouter.post(
   documentUpload.single("document"),
   async (req, res, next) => {
     if (!req.file) {
-      return res.status(400).json({ error: "Kein Dokument ausgewaehlt" });
+      return res.status(400).json({ error: "Kein Dokument ausgewählt" });
     }
     if (!(await hasValidDocumentSignature(req.file.path, req.file.mimetype))) {
       await unlink(req.file.path).catch(() => undefined);

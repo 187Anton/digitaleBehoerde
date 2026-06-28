@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("Buerger reicht Wohnsitzummeldung ein und Sachbearbeiter genehmigt sie", async ({
+test("Bürger reicht Wohnsitzummeldung ein und Sachbearbeiter genehmigt sie", async ({
   page,
 }) => {
   const marker = `E2E-${Date.now()}`;
@@ -17,10 +17,10 @@ test("Buerger reicht Wohnsitzummeldung ein und Sachbearbeiter genehmigt sie", as
   const oldAddress = page.getByRole("group", { name: "Bisherige Anschrift" });
   const newAddress = page.getByRole("group", { name: "Neue Anschrift" });
   await page.getByLabel("Einzugsdatum").fill("2026-07-01");
-  await oldAddress.getByLabel("Strasse und Hausnummer").fill("Alte Strasse 1");
+  await oldAddress.getByLabel("Straße und Hausnummer").fill("Alte Strasse 1");
   await oldAddress.getByLabel("Postleitzahl").fill("14467");
   await oldAddress.getByLabel("Ort").fill("Potsdam");
-  await newAddress.getByLabel("Strasse und Hausnummer").fill(newStreet);
+  await newAddress.getByLabel("Straße und Hausnummer").fill(newStreet);
   await newAddress.getByLabel("Postleitzahl").fill("10115");
   await newAddress.getByLabel("Ort").fill("Berlin");
   await page.getByLabel("Anzahl umziehender Personen").fill("2");
