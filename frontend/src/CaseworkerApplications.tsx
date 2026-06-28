@@ -50,7 +50,7 @@ export function CaseworkerApplications({
     <section className="section stack">
       <div className="section-header">
         <div>
-          <h2>Antragsbearbeitung</h2>
+          <h2>Arbeitskorb</h2>
           <span>{applications.length} Anträge im Arbeitskorb</span>
         </div>
       </div>
