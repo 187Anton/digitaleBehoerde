@@ -74,7 +74,7 @@ function App(): JSX.Element {
   const [mode, setMode] = useState<Mode>("login");
   const [user, setUser] = useState<AuthResponse["user"] | null>(null);
   const [email, setEmail] = useState("buerger@example.com");
-  const [password, setPassword] = useState("password123");
+  const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [message, setMessage] = useState("");
@@ -120,6 +120,9 @@ function App(): JSX.Element {
       setUser(response.user);
       setMessage(mode === "login" ? "Erfolgreich angemeldet." : "Registrierung erfolgreich.");
     } catch (error) {
+      if (mode === "login") {
+        setPassword("");
+      }
       setMessage(error instanceof Error ? error.message : "Anmeldung fehlgeschlagen.");
     } finally {
       setIsLoading(false);
@@ -296,7 +299,7 @@ function App(): JSX.Element {
             <h2>{mode === "login" ? "Login" : "Registrierung"}</h2>
             <p>Mit Ihrem Konto können Sie Anträge digital einreichen und verfolgen.</p>
           </div>
-          <form onSubmit={handleSubmit}>
+          <form autoComplete="off" onSubmit={handleSubmit}>
             <label className="field">
               E-Mail
               <input
@@ -312,6 +315,7 @@ function App(): JSX.Element {
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
+                autoComplete={mode === "login" ? "off" : "new-password"}
                 required
               />
             </label>
