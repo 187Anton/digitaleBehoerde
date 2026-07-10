@@ -17,7 +17,7 @@ export const residenceChangeSchema = z.object({
     .refine((value) => {
       const date = new Date(`${value}T00:00:00.000Z`);
       return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value);
-    }, "Einzugsdatum ist ungueltig"),
+    }, "Einzugsdatum ist ungültig"),
   oldStreet: requiredText,
   oldPostalCode: postalCode,
   oldCity: requiredText,
