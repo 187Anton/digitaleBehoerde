@@ -11,6 +11,7 @@ import {
   createResidenceChange,
   createDogTax,
   createCertificateOfConduct,
+  deleteApplicationDocument,
   fetchApplications,
   fetchCaseworkerApplications,
   updateProfile,
@@ -19,6 +20,8 @@ import {
   login,
   logout,
   register,
+  replaceApplicationDocument,
+  updateApplication,
   updateApplicationStatus,
   uploadApplicationDocument,
 } from "./api";
@@ -28,7 +31,7 @@ import { DogTaxForm } from "./DogTaxForm";
 import { ProfileForm } from "./ProfileForm";
 import { CertificateOfConductForm } from "./CertificateOfConductForm";
 type Mode = "login" | "register";
-type View = "catalog" | "service-detail" | "applications" | "profile";
+type View = "catalog" | "service-detail" | "applications" | "edit-application" | "profile";
 
 const statusLabels: Record<Application["status"], string> = {
   SUBMITTED: "Eingereicht",
@@ -58,6 +61,7 @@ const viewTitles: Record<View, string> = {
   catalog: "Antragskatalog",
   "service-detail": "Antrag stellen",
   applications: "Meine Anträge",
+  "edit-application": "Antrag bearbeiten",
   profile: "Mein Profil",
 };
 
@@ -83,6 +87,7 @@ function App(): JSX.Element {
   const [services, setServices] = useState<Service[]>([]);
   const [activeService, setActiveService] = useState<Service | null>(null);
   const [applications, setApplications] = useState<Application[]>([]);
+  const [editingApplication, setEditingApplication] = useState<Application | null>(null);
   useEffect(() => {
     fetchCurrentUser()
       .then((response) => setUser(response.user))
@@ -133,6 +138,7 @@ function App(): JSX.Element {
       setUser(null);
       setView("catalog");
       setActiveService(null);
+      setEditingApplication(null);
       setApplications([]);
       setMessage("Erfolgreich abgemeldet.");
     } catch (error) {
@@ -150,9 +156,14 @@ function App(): JSX.Element {
   }
   function backToCatalog() {
     setActiveService(null);
+    setEditingApplication(null);
     setView("catalog");
   }
-  async function handleResidenceChange(data: ResidenceChangeInput, document: File) {
+  async function handleResidenceChange(data: ResidenceChangeInput, document: File | null) {
+    if (!document) {
+      setMessage("Bitte wählen Sie ein Nachweisdokument aus.");
+      return;
+    }
     setIsLoading(true);
     setMessage("");
     try {
@@ -245,6 +256,88 @@ function App(): JSX.Element {
     } finally {
       setIsLoading(false);
     }
+  }
+  async function handleApplicationUpdate(
+    data: ResidenceChangeInput | DogTaxInput | CertificateOfConductInput
+  ) {
+    if (!editingApplication) {
+      return;
+    }
+    setIsLoading(true);
+    setMessage("");
+    try {
+      const response = await updateApplication(editingApplication.id, data);
+      setApplications((current) =>
+        current.map((application) =>
+          application.id === response.application.id ? response.application : application
+        )
+      );
+      setEditingApplication(null);
+      setView("applications");
+      setMessage("Antrag wurde aktualisiert.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Antrag konnte nicht aktualisiert werden.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+  async function handleDocumentReplace(
+    applicationId: string,
+    documentId: string,
+    file: File
+  ) {
+    setIsLoading(true);
+    setMessage("");
+    try {
+      const response = await replaceApplicationDocument(applicationId, documentId, file);
+      setApplications((current) =>
+        current.map((application) =>
+          application.id === applicationId
+            ? {
+                ...application,
+                documents: application.documents.map((document) =>
+                  document.id === documentId ? response.document : document
+                ),
+              }
+            : application
+        )
+      );
+      setMessage("Dokument wurde ersetzt.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Dokument konnte nicht ersetzt werden.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+  async function handleDocumentDelete(applicationId: string, documentId: string) {
+    setIsLoading(true);
+    setMessage("");
+    try {
+      await deleteApplicationDocument(applicationId, documentId);
+      setApplications((current) =>
+        current.map((application) =>
+          application.id === applicationId
+            ? {
+                ...application,
+                documents: application.documents.filter((document) => document.id !== documentId),
+              }
+            : application
+        )
+      );
+      setMessage("Dokument wurde gelöscht.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Dokument konnte nicht gelöscht werden.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+  function openApplicationEditor(application: Application) {
+    if (application.status !== "SUBMITTED") {
+      return;
+    }
+    setEditingApplication(application);
+    setView("edit-application");
+    setMessage("");
   }
   async function handleProfileUpdate(data: ProfileUpdateInput) {
     setIsLoading(true);
@@ -483,6 +576,54 @@ function App(): JSX.Element {
             </section>
           ) : null}
 
+          {user.role === "CITIZEN" && view === "edit-application" && editingApplication ? (
+            <section className="section">
+              <div className="detail-head">
+                <div>
+                  <h2>{applicationTypeLabels[editingApplication.type]}</h2>
+                  <p>Änderungen sind möglich, solange der Antrag noch nicht bearbeitet wird.</p>
+                </div>
+                <button
+                  className="ghost-button"
+                  type="button"
+                  onClick={() => {
+                    setEditingApplication(null);
+                    setView("applications");
+                  }}
+                >
+                  Abbrechen
+                </button>
+              </div>
+              {editingApplication.residenceChange ? (
+                <ResidenceChangeForm
+                  key={editingApplication.id}
+                  isSubmitting={isLoading}
+                  initialData={editingApplication.residenceChange}
+                  isEditing
+                  onSubmit={async (data) => handleApplicationUpdate(data)}
+                />
+              ) : null}
+              {editingApplication.dogTax ? (
+                <DogTaxForm
+                  key={editingApplication.id}
+                  isSubmitting={isLoading}
+                  initialData={editingApplication.dogTax}
+                  isEditing
+                  onSubmit={async (data) => handleApplicationUpdate(data)}
+                />
+              ) : null}
+              {editingApplication.certificateOfConduct ? (
+                <CertificateOfConductForm
+                  key={editingApplication.id}
+                  isSubmitting={isLoading}
+                  initialData={editingApplication.certificateOfConduct}
+                  isEditing
+                  onSubmit={handleApplicationUpdate}
+                />
+              ) : null}
+            </section>
+          ) : null}
+
           {user.role === "CITIZEN" && view === "applications" ? (
             <section className="section">
               <div className="section-header">
@@ -521,6 +662,41 @@ function App(): JSX.Element {
                               >
                                 {document.originalName}
                               </a>
+                              {application.status === "SUBMITTED" ? (
+                                <div className="document-actions">
+                                  <label className="file-button">
+                                    Ersetzen
+                                    <input
+                                      className="visually-hidden"
+                                      type="file"
+                                      aria-label={`${document.originalName} ersetzen`}
+                                      accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                                      disabled={isLoading}
+                                      onChange={(event) => {
+                                        const file = event.target.files?.[0];
+                                        if (file) {
+                                          void handleDocumentReplace(
+                                            application.id,
+                                            document.id,
+                                            file
+                                          );
+                                        }
+                                        event.target.value = "";
+                                      }}
+                                    />
+                                  </label>
+                                  <button
+                                    className="ghost-button"
+                                    type="button"
+                                    disabled={isLoading}
+                                    onClick={() =>
+                                      void handleDocumentDelete(application.id, document.id)
+                                    }
+                                  >
+                                    Löschen
+                                  </button>
+                                </div>
+                              ) : null}
                             </li>
                           ))}
                         </ul>
@@ -545,7 +721,24 @@ function App(): JSX.Element {
                         </label>
                       ) : null}
                     </div>
-                    <span className={statusClassName(application.status)}>{statusLabels[application.status]}</span>
+                    <div className="application-actions">
+                      <span className={statusClassName(application.status)}>
+                        {statusLabels[application.status]}
+                      </span>
+                      <button
+                        className="ghost-button"
+                        type="button"
+                        disabled={isLoading || application.status !== "SUBMITTED"}
+                        title={
+                          application.status === "SUBMITTED"
+                            ? "Antrag bearbeiten"
+                            : "Bearbeitung nach Beginn der Prüfung nicht mehr möglich"
+                        }
+                        onClick={() => openApplicationEditor(application)}
+                      >
+                        Bearbeiten
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>
