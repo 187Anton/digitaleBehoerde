@@ -649,6 +649,33 @@ a {
   gap: 14px;
 }
 
+.password-input {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.password-toggle {
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 14px;
+  background: var(--surface);
+  color: var(--primary-dark);
+  font: inherit;
+  cursor: pointer;
+}
+
+.password-toggle:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.password-toggle:focus-visible {
+  outline: 3px solid rgba(18, 100, 200, 0.24);
+  outline-offset: 2px;
+}
+
 .message-banner {
   padding: 13px 16px;
   border-radius: 8px;
