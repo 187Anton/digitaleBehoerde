@@ -515,6 +515,23 @@ a {
   margin-top: 12px;
 }
 
+.citizen-document-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 13px;
+  border-radius: 8px;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+}
+
+.citizen-document-row > div:nth-child(2) {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
 .upload-box {
   border-style: dashed;
   margin-top: 10px;
@@ -697,7 +714,7 @@ a {
   }
 
   .nav-list {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .sidebar-note {
@@ -752,6 +769,7 @@ a {
 
   .application-row,
   .document-row,
+  .citizen-document-row,
   .upload-box,
   .detail-list {
     grid-template-columns: 1fr;
