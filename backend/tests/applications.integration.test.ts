@@ -139,6 +139,16 @@ describe("Antrags-Endpunkte (Integration)", () => {
       .set("Cookie", cookie);
     expect(download.status).toBe(200);
     expect(download.headers["content-disposition"]).toContain("meldebestaetigung.pdf");
+
+    const caseworker = await createUser("CASEWORKER");
+    const preview = await request(app)
+      .get(
+        `/api/applications/${created.body.application.id}/documents/${upload.body.document.id}?inline=true`
+      )
+      .set("Cookie", caseworker.cookie);
+    expect(preview.status).toBe(200);
+    expect(preview.headers["content-type"]).toContain("application/pdf");
+    expect(preview.headers["content-disposition"]).toBe("inline");
   });
 
   it("lehnt nicht erlaubte Dateitypen ab", async () => {

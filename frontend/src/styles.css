@@ -515,6 +515,42 @@ a {
   margin-top: 12px;
 }
 
+.document-preview-card {
+  display: grid;
+  gap: 12px;
+  padding: 13px;
+  border-radius: 8px;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+}
+
+.document-preview-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.document-preview-header > div:last-child {
+  display: grid;
+  gap: 4px;
+}
+
+.document-preview {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.document-preview-pdf {
+  min-height: 520px;
+}
+
+.document-preview-image {
+  max-height: 520px;
+  object-fit: contain;
+}
+
 .upload-box {
   border-style: dashed;
   margin-top: 10px;
