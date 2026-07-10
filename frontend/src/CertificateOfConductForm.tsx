@@ -3,13 +3,22 @@ import type { CertificateOfConductInput } from "./api";
 
 type Props = {
   isSubmitting: boolean;
+  initialData?: Partial<CertificateOfConductInput>;
   onSubmit: (data: CertificateOfConductInput) => Promise<void>;
 };
 
-export function CertificateOfConductForm({ isSubmitting, onSubmit }: Props): JSX.Element {
+export function CertificateOfConductForm({
+  isSubmitting,
+  initialData,
+  onSubmit,
+}: Props): JSX.Element {
   const [form, setForm] = useState<CertificateOfConductInput>({
-    purpose: "",
-    deliveryType: "PRIVATE",
+    purpose: initialData?.purpose ?? "",
+    deliveryType: initialData?.deliveryType ?? "PRIVATE",
+    deliveryRecipient: initialData?.deliveryRecipient ?? "",
+    deliveryStreet: initialData?.deliveryStreet ?? "",
+    deliveryPostalCode: initialData?.deliveryPostalCode ?? "",
+    deliveryCity: initialData?.deliveryCity ?? "",
   });
 
   function update<K extends keyof CertificateOfConductInput>(
@@ -49,6 +58,52 @@ export function CertificateOfConductForm({ isSubmitting, onSubmit }: Props): JSX
           <option value="AUTHORITY">Direkt an eine Behörde</option>
         </select>
       </label>
+
+      <fieldset className="form-fieldset">
+        <legend>
+          {form.deliveryType === "AUTHORITY" ? "Anschrift der Behörde" : "Versandanschrift"}
+        </legend>
+        <div className="form-grid">
+          <label className="field">
+            {form.deliveryType === "AUTHORITY" ? "Behördenname" : "Empfänger"}
+            <input
+              value={form.deliveryRecipient}
+              onChange={(event) => update("deliveryRecipient", event.target.value)}
+              required
+              maxLength={120}
+            />
+          </label>
+          <label className="field">
+            Straße und Hausnummer
+            <input
+              value={form.deliveryStreet}
+              onChange={(event) => update("deliveryStreet", event.target.value)}
+              required
+              maxLength={120}
+            />
+          </label>
+          <label className="field">
+            Postleitzahl
+            <input
+              value={form.deliveryPostalCode}
+              onChange={(event) => update("deliveryPostalCode", event.target.value)}
+              required
+              inputMode="numeric"
+              pattern="[0-9]{5}"
+              maxLength={5}
+            />
+          </label>
+          <label className="field">
+            Ort
+            <input
+              value={form.deliveryCity}
+              onChange={(event) => update("deliveryCity", event.target.value)}
+              required
+              maxLength={120}
+            />
+          </label>
+        </div>
+      </fieldset>
 
       <div className="button-row">
         <button className="primary-button" type="submit" disabled={isSubmitting}>
