@@ -66,6 +66,67 @@ describe("Antrags-Endpunkte (Integration)", () => {
     );
   });
 
+  it("aktualisiert einen eigenen eingereichten Antrag", async () => {
+    const { cookie } = await createUser();
+    const created = await request(app)
+      .post("/api/applications/residence-change")
+      .set("Cookie", cookie)
+      .send(validPayload);
+
+    const updated = await request(app)
+      .patch(`/api/applications/${created.body.application.id}`)
+      .set("Cookie", cookie)
+      .send({ ...validPayload, newCity: "Hamburg", householdSize: 3 });
+
+    expect(updated.status).toBe(200);
+    expect(updated.body.application.residenceChange).toMatchObject({
+      newCity: "Hamburg",
+      householdSize: 3,
+    });
+  });
+
+  it("verhindert Änderungen nach Beginn der Bearbeitung", async () => {
+    const { cookie } = await createUser();
+    const created = await request(app)
+      .post("/api/applications/residence-change")
+      .set("Cookie", cookie)
+      .send(validPayload);
+    await prisma.application.update({
+      where: { id: created.body.application.id },
+      data: { status: "IN_REVIEW" },
+    });
+
+    const updated = await request(app)
+      .patch(`/api/applications/${created.body.application.id}`)
+      .set("Cookie", cookie)
+      .send({ ...validPayload, newCity: "Hamburg" });
+
+    expect(updated.status).toBe(409);
+    const detail = await prisma.residenceChange.findUnique({
+      where: { applicationId: created.body.application.id },
+    });
+    expect(detail?.newCity).toBe("Berlin");
+  });
+
+  it("aktualisiert einen Führungszeugnis-Antrag", async () => {
+    const { cookie } = await createUser();
+    const created = await request(app)
+      .post("/api/applications/certificate-of-conduct")
+      .set("Cookie", cookie)
+      .send({ purpose: "Arbeitgeber", deliveryType: "PRIVATE" });
+
+    const updated = await request(app)
+      .patch(`/api/applications/${created.body.application.id}`)
+      .set("Cookie", cookie)
+      .send({ purpose: "Ehrenamt", deliveryType: "AUTHORITY" });
+
+    expect(updated.status).toBe(200);
+    expect(updated.body.application.certificateOfConduct).toMatchObject({
+      purpose: "Ehrenamt",
+      deliveryType: "AUTHORITY",
+    });
+  });
+
   it("lehnt unvollstaendige Meldedaten ab", async () => {
     const { cookie } = await createUser();
     const res = await request(app)
@@ -139,6 +200,45 @@ describe("Antrags-Endpunkte (Integration)", () => {
       .set("Cookie", cookie);
     expect(download.status).toBe(200);
     expect(download.headers["content-disposition"]).toContain("meldebestaetigung.pdf");
+  });
+
+  it("ersetzt und löscht ein Dokument eines eingereichten Antrags", async () => {
+    const { cookie } = await createUser();
+    const created = await request(app)
+      .post("/api/applications/residence-change")
+      .set("Cookie", cookie)
+      .send(validPayload);
+    const upload = await request(app)
+      .post(`/api/applications/${created.body.application.id}/documents`)
+      .set("Cookie", cookie)
+      .attach("document", Buffer.from("%PDF-1.4 alt"), {
+        filename: "alt.pdf",
+        contentType: "application/pdf",
+      });
+
+    const replaced = await request(app)
+      .put(
+        `/api/applications/${created.body.application.id}/documents/${upload.body.document.id}`
+      )
+      .set("Cookie", cookie)
+      .attach("document", Buffer.from("%PDF-1.4 neu"), {
+        filename: "neu.pdf",
+        contentType: "application/pdf",
+      });
+
+    expect(replaced.status).toBe(200);
+    expect(replaced.body.document).toMatchObject({
+      id: upload.body.document.id,
+      originalName: "neu.pdf",
+    });
+
+    const deleted = await request(app)
+      .delete(
+        `/api/applications/${created.body.application.id}/documents/${upload.body.document.id}`
+      )
+      .set("Cookie", cookie);
+    expect(deleted.status).toBe(204);
+    expect(await prisma.document.count()).toBe(0);
   });
 
   it("lehnt nicht erlaubte Dateitypen ab", async () => {
