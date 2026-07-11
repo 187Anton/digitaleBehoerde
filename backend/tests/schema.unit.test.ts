@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { registerSchema, loginSchema } from "../src/schemas/auth.schema.js";
+import { chatMessageSchema, residenceChangeSchema } from "../src/schemas/application.schema.js";
 import {
   applicationCommentSchema,
   residenceChangeSchema,
@@ -84,6 +85,16 @@ describe("residenceChangeSchema", () => {
   });
 });
 
+describe("chatMessageSchema", () => {
+  it("trimmt eine gültige Nachricht", () => {
+    expect(chatMessageSchema.parse({ body: "  Rückfrage zum Antrag  " }).body).toBe(
+      "Rückfrage zum Antrag"
+    );
+  });
+
+  it("lehnt leere und zu lange Nachrichten ab", () => {
+    expect(chatMessageSchema.safeParse({ body: "   " }).success).toBe(false);
+    expect(chatMessageSchema.safeParse({ body: "x".repeat(2001) }).success).toBe(false);
 describe("applicationCommentSchema", () => {
   it("trimmt einen gültigen Kommentar", () => {
     expect(applicationCommentSchema.parse({ body: "  Rückfrage zum Nachweis  " }).body).toBe(

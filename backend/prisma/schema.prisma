@@ -48,6 +48,7 @@ model User {
   city         String?
   createdAt    DateTime             @default(now()) @map("created_at")
   applications Application[]
+  chatMessages ChatMessage[] @relation("ChatMessageAuthor")
   comments     ApplicationComment[] @relation("CommentAuthor")
 
   @@map("users")
@@ -65,12 +66,30 @@ model Application {
   dogTax               DogTax?
   certificateOfConduct CertificateOfConduct?
   documents            Document[]
+  chatMessages         ChatMessage[]
   comments             ApplicationComment[]
 
   @@index([userId, createdAt])
   @@map("applications")
 }
 
+model ChatMessage {
+  id                 String      @id @default(uuid())
+  applicationId      String      @map("application_id")
+  authorId           String      @map("author_id")
+  body               String
+  createdAt          DateTime    @default(now()) @map("created_at")
+  readByCitizenAt    DateTime?   @map("read_by_citizen_at")
+  readByCaseworkerAt DateTime?   @map("read_by_caseworker_at")
+  application        Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  author             User        @relation("ChatMessageAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([applicationId, createdAt])
+  @@index([authorId])
+  @@map("chat_messages")
+}
+
+model Document {
 model ApplicationComment {
   id            String      @id @default(uuid())
   applicationId String      @map("application_id")

@@ -83,12 +83,15 @@ export type ApplicationDocument = {
   size: number;
   uploadedAt: string;
 };
+export type ChatMessage = {
 export type ApplicationComment = {
   id: string;
   applicationId: string;
   authorId: string;
   body: string;
   createdAt: string;
+  readByCitizenAt: string | null;
+  readByCaseworkerAt: string | null;
   author: {
     id: string;
     role: "CITIZEN" | "CASEWORKER";
@@ -109,6 +112,7 @@ export type Application = {
     | (CertificateOfConductInput & { id: string; applicationId: string })
     | null;
   documents: ApplicationDocument[];
+  unreadChatMessages?: number;
   comments?: ApplicationComment[];
   user?: {
     id: string;
@@ -294,6 +298,27 @@ export function updateApplicationStatus(
     }
   );
 }
+export function fetchApplicationChat(
+  applicationId: string,
+  role: AuthUser["role"]
+): Promise<{ messages: ChatMessage[] }> {
+  const path = role === "CASEWORKER"
+    ? `/api/caseworker/applications/${encodeURIComponent(applicationId)}/messages`
+    : `/api/applications/${encodeURIComponent(applicationId)}/messages`;
+  return request<{ messages: ChatMessage[] }>(path);
+}
+export function sendApplicationChatMessage(
+  applicationId: string,
+  role: AuthUser["role"],
+  body: string
+): Promise<{ message: ChatMessage }> {
+  const path = role === "CASEWORKER"
+    ? `/api/caseworker/applications/${encodeURIComponent(applicationId)}/messages`
+    : `/api/applications/${encodeURIComponent(applicationId)}/messages`;
+  return request<{ message: ChatMessage }>(path, {
+    method: "POST",
+    body: JSON.stringify({ body }),
+  });
 export function addApplicationComment(
   applicationId: string,
   body: string

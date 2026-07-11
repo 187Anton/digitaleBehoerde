@@ -17,6 +17,7 @@ type Props = {
   applications: Application[];
   isUpdating: boolean;
   onStatusChange: (applicationId: string, status: NextStatus) => Promise<void>;
+  onOpenChat: (application: Application) => void;
   onComment: (applicationId: string, body: string) => Promise<boolean>;
 };
 
@@ -106,6 +107,7 @@ export function CaseworkerApplications({
   applications,
   isUpdating,
   onStatusChange,
+  onOpenChat,
   onComment,
 }: Props): JSX.Element {
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("ALL");
@@ -302,6 +304,13 @@ export function CaseworkerApplications({
               onSubmit={(body) => onComment(application.id, body)}
             />
             <div className="button-row">
+              <button
+                className="ghost-button"
+                type="button"
+                onClick={() => onOpenChat(application)}
+              >
+                Nachrichten ({application.unreadChatMessages ?? 0})
+              </button>
               {application.status === "SUBMITTED" ? (
                 <button
                   className="primary-button"

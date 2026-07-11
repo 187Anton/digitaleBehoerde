@@ -24,6 +24,12 @@ const applicationInclude = {
   dogTax: true,
   certificateOfConduct: true,
   documents: { select: publicDocumentSelect },
+  _count: {
+    select: {
+      chatMessages: {
+        where: { readByCaseworkerAt: null },
+      },
+    },
   comments: {
     include: {
       author: {
@@ -33,6 +39,17 @@ const applicationInclude = {
     orderBy: { createdAt: "asc" },
   },
 } satisfies Prisma.ApplicationInclude;
+
+const chatMessageInclude = {
+  author: {
+    select: {
+      id: true,
+      role: true,
+      firstName: true,
+      lastName: true,
+    },
+  },
+} as const;
 
 const allowedTransitions: Record<ApplicationStatus, ApplicationStatus[]> = {
   SUBMITTED: ["IN_REVIEW"],
@@ -48,7 +65,12 @@ caseworkerRouter.get("/applications", async (_req, res) => {
     include: applicationInclude,
     orderBy: { createdAt: "asc" },
   });
-  return res.json({ applications });
+  return res.json({
+    applications: applications.map(({ _count, ...application }) => ({
+      ...application,
+      unreadChatMessages: _count.chatMessages,
+    })),
+  });
 });
 
 caseworkerRouter.get("/applications/:id", async (req, res) => {
@@ -59,7 +81,56 @@ caseworkerRouter.get("/applications/:id", async (req, res) => {
   if (!application) {
     return res.status(404).json({ error: "Antrag nicht gefunden" });
   }
-  return res.json({ application });
+  const { _count, ...applicationData } = application;
+  return res.json({ application: { ...applicationData, unreadChatMessages: _count.chatMessages } });
+});
+
+caseworkerRouter.get("/applications/:id/messages", async (req, res) => {
+  const application = await prisma.application.findUnique({
+    where: { id: req.params.id },
+    select: { id: true },
+  });
+  if (!application) {
+    return res.status(404).json({ error: "Antrag nicht gefunden" });
+  }
+  const messages = await prisma.chatMessage.findMany({
+    where: { applicationId: application.id },
+    include: chatMessageInclude,
+    orderBy: { createdAt: "asc" },
+  });
+  await prisma.chatMessage.updateMany({
+    where: {
+      applicationId: application.id,
+      authorId: { not: req.user!.userId },
+      readByCaseworkerAt: null,
+    },
+    data: { readByCaseworkerAt: new Date() },
+  });
+  return res.json({ messages });
+});
+
+caseworkerRouter.post("/applications/:id/messages", async (req, res) => {
+  const parsed = chatMessageSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Nachricht darf nicht leer sein" });
+  }
+  const application = await prisma.application.findUnique({
+    where: { id: req.params.id },
+    select: { id: true },
+  });
+  if (!application) {
+    return res.status(404).json({ error: "Antrag nicht gefunden" });
+  }
+  const message = await prisma.chatMessage.create({
+    data: {
+      applicationId: application.id,
+      authorId: req.user!.userId,
+      body: parsed.data.body,
+      readByCaseworkerAt: new Date(),
+    },
+    include: chatMessageInclude,
+  });
+  return res.status(201).json({ message });
 });
 
 caseworkerRouter.post("/applications/:id/comments", async (req, res) => {
@@ -118,5 +189,6 @@ caseworkerRouter.patch("/applications/:id/status", async (req, res) => {
     include: applicationInclude,
   });
   applicationStatusChanges.inc({ from: current.status, to: application.status });
-  return res.json({ application });
+  const { _count, ...applicationData } = application;
+  return res.json({ application: { ...applicationData, unreadChatMessages: _count.chatMessages } });
 });

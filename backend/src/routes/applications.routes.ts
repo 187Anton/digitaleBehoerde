@@ -17,6 +17,7 @@ import {
 import { requireAuth } from "../middleware/requireAuth.js";
 import {
   certificateOfConductSchema,
+  chatMessageSchema,
   dogTaxSchema,
   residenceChangeSchema,
 } from "../schemas/application.schema.js";
@@ -24,6 +25,15 @@ import { applicationsCreated } from "../lib/metrics.js";
 
 export const applicationsRouter = Router();
 
+const chatMessageInclude = {
+  author: {
+    select: {
+      id: true,
+      role: true,
+      firstName: true,
+      lastName: true,
+    },
+  },
 const citizenApplicationInclude = {
   residenceChange: true,
   dogTax: true,
@@ -41,6 +51,15 @@ applicationsRouter.get("/", async (req, res) => {
       dogTax: true,
       certificateOfConduct: true,
       documents: { select: publicDocumentSelect },
+      _count: {
+        select: {
+          chatMessages: {
+            where: {
+              readByCitizenAt: null,
+              authorId: { not: req.user!.userId },
+            },
+          },
+        },
       comments: {
         include: {
           author: {
@@ -54,7 +73,12 @@ applicationsRouter.get("/", async (req, res) => {
     orderBy: { createdAt: "desc" },
   });
 
-  return res.json({ applications });
+  return res.json({
+    applications: applications.map(({ _count, ...application }) => ({
+      ...application,
+      unreadChatMessages: _count.chatMessages,
+    })),
+  });
 });
 
 applicationsRouter.post(
@@ -221,6 +245,13 @@ applicationsRouter.post("/certificate-of-conduct", async (req, res) => {
   return res.status(201).json({ application });
 });
 
+applicationsRouter.get("/:id/messages", async (req, res) => {
+  if (req.user!.role !== "CITIZEN") {
+    return res.status(403).json({ error: "Nur Bürger können eigene Nachrichten lesen" });
+  }
+  const application = await prisma.application.findFirst({
+    where: { id: req.params.id, userId: req.user!.userId },
+    select: { id: true },
 applicationsRouter.patch("/:id", async (req, res) => {
   if (req.user!.role !== "CITIZEN") {
     return res.status(403).json({ error: "Nur Bürger können eigene Anträge bearbeiten" });
@@ -232,6 +263,49 @@ applicationsRouter.patch("/:id", async (req, res) => {
   if (!application) {
     return res.status(404).json({ error: "Antrag nicht gefunden" });
   }
+
+  const messages = await prisma.chatMessage.findMany({
+    where: { applicationId: application.id },
+    include: chatMessageInclude,
+    orderBy: { createdAt: "asc" },
+  });
+  await prisma.chatMessage.updateMany({
+    where: {
+      applicationId: application.id,
+      authorId: { not: req.user!.userId },
+      readByCitizenAt: null,
+    },
+    data: { readByCitizenAt: new Date() },
+  });
+  return res.json({ messages });
+});
+
+applicationsRouter.post("/:id/messages", async (req, res) => {
+  if (req.user!.role !== "CITIZEN") {
+    return res.status(403).json({ error: "Nur Bürger können Nachrichten senden" });
+  }
+  const parsed = chatMessageSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Nachricht darf nicht leer sein" });
+  }
+  const application = await prisma.application.findFirst({
+    where: { id: req.params.id, userId: req.user!.userId },
+    select: { id: true },
+  });
+  if (!application) {
+    return res.status(404).json({ error: "Antrag nicht gefunden" });
+  }
+
+  const message = await prisma.chatMessage.create({
+    data: {
+      applicationId: application.id,
+      authorId: req.user!.userId,
+      body: parsed.data.body,
+      readByCitizenAt: new Date(),
+    },
+    include: chatMessageInclude,
+  });
+  return res.status(201).json({ message });
   if (application.status !== "SUBMITTED") {
     return res.status(409).json({ error: "Antrag kann nicht mehr bearbeitet werden" });
   }
