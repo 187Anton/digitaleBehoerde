@@ -47,7 +47,7 @@ export function createApp() {
     ) => {
       if (err instanceof multer.MulterError) {
         const error = err.code === "LIMIT_FILE_SIZE"
-          ? "Dokument darf maximal 5 MB gross sein."
+          ? "Dokument darf maximal 5 MB groß sein."
           : "Nur PDF-, JPEG- und PNG-Dokumente sind erlaubt.";
         return res.status(400).json({ error });
       }

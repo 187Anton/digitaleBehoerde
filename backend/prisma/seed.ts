@@ -8,13 +8,13 @@ async function main() {
 
   await prisma.user.upsert({
     where: { email: "buerger@example.com" },
-    update: { passwordHash },
+    update: { passwordHash, lastName: "Bürger" },
     create: {
       email: "buerger@example.com",
       passwordHash,
       role: "CITIZEN",
       firstName: "Bea",
-      lastName: "Buerger",
+      lastName: "Bürger",
     },
   });
   await prisma.user.upsert({

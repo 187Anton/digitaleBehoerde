@@ -27,6 +27,13 @@ enum ApplicationStatus {
   REJECTED
 }
 
+enum DocumentType {
+  OTHER
+  IDENTITY_DOCUMENT
+  LANDLORD_CONFIRMATION
+  MOVE_IN_CONFIRMATION
+}
+
 model User {
   id           String               @id @default(uuid())
   email        String               @unique
@@ -79,14 +86,15 @@ model ApplicationComment {
 }
 
 model Document {
-  id            String      @id @default(uuid())
-  applicationId String      @map("application_id")
-  originalName  String      @map("original_name")
-  storedName    String      @unique @map("stored_name")
-  mimeType      String      @map("mime_type")
+  id            String       @id @default(uuid())
+  applicationId String       @map("application_id")
+  originalName  String       @map("original_name")
+  storedName    String       @unique @map("stored_name")
+  mimeType      String       @map("mime_type")
+  type          DocumentType @default(OTHER)
   size          Int
-  uploadedAt    DateTime    @default(now()) @map("uploaded_at")
-  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  uploadedAt    DateTime     @default(now()) @map("uploaded_at")
+  application   Application  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
   @@index([applicationId])
   @@map("documents")
@@ -125,11 +133,15 @@ model DogTax {
 }
 
 model CertificateOfConduct {
-  id            String      @id @default(uuid())
-  applicationId String      @unique @map("application_id")
-  purpose       String
-  deliveryType  String      @map("delivery_type")
-  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  id                 String      @id @default(uuid())
+  applicationId      String      @unique @map("application_id")
+  purpose            String
+  deliveryType       String      @map("delivery_type")
+  deliveryRecipient  String      @map("delivery_recipient")
+  deliveryStreet     String      @map("delivery_street")
+  deliveryPostalCode String      @map("delivery_postal_code")
+  deliveryCity       String      @map("delivery_city")
+  application        Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
   @@map("certificate_of_conducts")
 }
