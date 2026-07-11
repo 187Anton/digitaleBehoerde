@@ -27,20 +27,29 @@ enum ApplicationStatus {
   REJECTED
 }
 
+enum DocumentType {
+  OTHER
+  IDENTITY_DOCUMENT
+  LANDLORD_CONFIRMATION
+  MOVE_IN_CONFIRMATION
+}
+
 model User {
-  id           String        @id @default(uuid())
-  email        String        @unique
-  passwordHash String        @map("password_hash")
-  role         Role          @default(CITIZEN)
-  firstName    String?       @map("first_name")
-  lastName     String?       @map("last_name")
-  birthDate    DateTime?     @map("birth_date") @db.Date
-  birthPlace   String?       @map("birth_place")
+  id           String               @id @default(uuid())
+  email        String               @unique
+  passwordHash String               @map("password_hash")
+  role         Role                 @default(CITIZEN)
+  firstName    String?              @map("first_name")
+  lastName     String?              @map("last_name")
+  birthDate    DateTime?            @map("birth_date") @db.Date
+  birthPlace   String?              @map("birth_place")
   street       String?
-  postalCode   String?       @map("postal_code")
+  postalCode   String?              @map("postal_code")
   city         String?
-  createdAt    DateTime      @default(now()) @map("created_at")
+  createdAt    DateTime             @default(now()) @map("created_at")
   applications Application[]
+  chatMessages ChatMessage[] @relation("ChatMessageAuthor")
+  comments     ApplicationComment[] @relation("CommentAuthor")
 
   @@map("users")
 }
@@ -57,20 +66,54 @@ model Application {
   dogTax               DogTax?
   certificateOfConduct CertificateOfConduct?
   documents            Document[]
+  chatMessages         ChatMessage[]
+  comments             ApplicationComment[]
 
   @@index([userId, createdAt])
   @@map("applications")
 }
 
+model ChatMessage {
+  id                 String      @id @default(uuid())
+  applicationId      String      @map("application_id")
+  authorId           String      @map("author_id")
+  body               String
+  createdAt          DateTime    @default(now()) @map("created_at")
+  readByCitizenAt    DateTime?   @map("read_by_citizen_at")
+  readByCaseworkerAt DateTime?   @map("read_by_caseworker_at")
+  application        Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  author             User        @relation("ChatMessageAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([applicationId, createdAt])
+  @@index([authorId])
+  @@map("chat_messages")
+}
+
 model Document {
+model ApplicationComment {
   id            String      @id @default(uuid())
   applicationId String      @map("application_id")
-  originalName  String      @map("original_name")
-  storedName    String      @unique @map("stored_name")
-  mimeType      String      @map("mime_type")
-  size          Int
-  uploadedAt    DateTime    @default(now()) @map("uploaded_at")
+  authorId      String      @map("author_id")
+  body          String
+  createdAt     DateTime    @default(now()) @map("created_at")
   application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  author        User        @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([applicationId, createdAt])
+  @@index([authorId])
+  @@map("application_comments")
+}
+
+model Document {
+  id            String       @id @default(uuid())
+  applicationId String       @map("application_id")
+  originalName  String       @map("original_name")
+  storedName    String       @unique @map("stored_name")
+  mimeType      String       @map("mime_type")
+  type          DocumentType @default(OTHER)
+  size          Int
+  uploadedAt    DateTime     @default(now()) @map("uploaded_at")
+  application   Application  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
   @@index([applicationId])
   @@map("documents")
@@ -109,11 +152,15 @@ model DogTax {
 }
 
 model CertificateOfConduct {
-  id            String      @id @default(uuid())
-  applicationId String      @unique @map("application_id")
-  purpose       String
-  deliveryType  String      @map("delivery_type")
-  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  id                 String      @id @default(uuid())
+  applicationId      String      @unique @map("application_id")
+  purpose            String
+  deliveryType       String      @map("delivery_type")
+  deliveryRecipient  String      @map("delivery_recipient")
+  deliveryStreet     String      @map("delivery_street")
+  deliveryPostalCode String      @map("delivery_postal_code")
+  deliveryCity       String      @map("delivery_city")
+  application        Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
   @@map("certificate_of_conducts")
 }

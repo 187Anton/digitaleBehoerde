@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { unlink } from "node:fs/promises";
+import { DocumentType } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import {
   deleteStoredDocument,
@@ -11,16 +12,34 @@ import {
   documentUpload,
   hasValidDocumentSignature,
   publicDocumentSelect,
+  residenceDocumentUpload,
 } from "../lib/upload.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import {
   certificateOfConductSchema,
+  chatMessageSchema,
   dogTaxSchema,
   residenceChangeSchema,
 } from "../schemas/application.schema.js";
 import { applicationsCreated } from "../lib/metrics.js";
 
 export const applicationsRouter = Router();
+
+const chatMessageInclude = {
+  author: {
+    select: {
+      id: true,
+      role: true,
+      firstName: true,
+      lastName: true,
+    },
+  },
+const citizenApplicationInclude = {
+  residenceChange: true,
+  dogTax: true,
+  certificateOfConduct: true,
+  documents: { select: publicDocumentSelect },
+} as const;
 
 applicationsRouter.use(requireAuth);
 
@@ -32,44 +51,136 @@ applicationsRouter.get("/", async (req, res) => {
       dogTax: true,
       certificateOfConduct: true,
       documents: { select: publicDocumentSelect },
+      _count: {
+        select: {
+          chatMessages: {
+            where: {
+              readByCitizenAt: null,
+              authorId: { not: req.user!.userId },
+            },
+          },
+        },
+      comments: {
+        include: {
+          author: {
+            select: { id: true, role: true, firstName: true, lastName: true },
+          },
+        },
+        orderBy: { createdAt: "asc" },
+      },
     },
+    include: citizenApplicationInclude,
     orderBy: { createdAt: "desc" },
   });
 
-  return res.json({ applications });
-});
-
-applicationsRouter.post("/residence-change", async (req, res) => {
-  if (req.user!.role !== "CITIZEN") {
-    return res.status(403).json({ error: "Nur Bürger können Anträge stellen" });
-  }
-
-  const parsed = residenceChangeSchema.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).json({
-      error: "Validierung fehlgeschlagen",
-      details: parsed.error.flatten(),
-    });
-  }
-
-  const { moveDate, ...data } = parsed.data;
-  const application = await prisma.application.create({
-    data: {
-      type: "RESIDENCE_CHANGE",
-      userId: req.user!.userId,
-      residenceChange: {
-        create: {
-          ...data,
-          moveDate: new Date(`${moveDate}T00:00:00.000Z`),
-        },
-      },
-    },
-    include: { residenceChange: true, documents: { select: publicDocumentSelect } },
+  return res.json({
+    applications: applications.map(({ _count, ...application }) => ({
+      ...application,
+      unreadChatMessages: _count.chatMessages,
+    })),
   });
-  applicationsCreated.inc({ type: application.type });
-
-  return res.status(201).json({ application });
 });
+
+applicationsRouter.post(
+  "/residence-change",
+  (req, res, next) => {
+    if (req.user!.role !== "CITIZEN") {
+      return res.status(403).json({ error: "Nur Bürger können Anträge stellen" });
+    }
+    return next();
+  },
+  residenceDocumentUpload.fields([
+    { name: "identityDocument", maxCount: 1 },
+    { name: "landlordConfirmation", maxCount: 1 },
+    { name: "moveInConfirmation", maxCount: 1 },
+  ]),
+  async (req, res, next) => {
+    const files = req.files as Record<string, Express.Multer.File[]> | undefined;
+    const identityDocument = files?.identityDocument?.[0];
+    const landlordConfirmation = files?.landlordConfirmation?.[0];
+    const moveInConfirmation = files?.moveInConfirmation?.[0];
+    const uploadedFiles = [identityDocument, landlordConfirmation, moveInConfirmation].filter(
+      (file): file is Express.Multer.File => Boolean(file)
+    );
+    const cleanupTemporaryFiles = () =>
+      Promise.all(uploadedFiles.map((file) => unlink(file.path).catch(() => undefined)));
+
+    if (!identityDocument || !landlordConfirmation) {
+      await cleanupTemporaryFiles();
+      return res.status(400).json({
+        error: "Personalausweis und Wohnungsgeberbestätigung sind erforderlich",
+      });
+    }
+
+    let body: unknown;
+    try {
+      body = JSON.parse(String(req.body.data ?? ""));
+    } catch {
+      await cleanupTemporaryFiles();
+      return res.status(400).json({ error: "Antragsdaten sind ungültig" });
+    }
+    const parsed = residenceChangeSchema.safeParse(body);
+    if (!parsed.success) {
+      await cleanupTemporaryFiles();
+      return res.status(400).json({
+        error: "Validierung fehlgeschlagen",
+        details: parsed.error.flatten(),
+      });
+    }
+
+    const signatures = await Promise.all(
+      uploadedFiles.map((file) => hasValidDocumentSignature(file.path, file.mimetype))
+    );
+    if (signatures.some((valid) => !valid)) {
+      await cleanupTemporaryFiles();
+      return res.status(400).json({ error: "Dateiinhalt entspricht nicht dem Dateityp" });
+    }
+
+    const typedFiles: Array<{ file: Express.Multer.File; type: DocumentType }> = [
+      { file: identityDocument, type: DocumentType.IDENTITY_DOCUMENT },
+      { file: landlordConfirmation, type: DocumentType.LANDLORD_CONFIRMATION },
+    ];
+    if (moveInConfirmation) {
+      typedFiles.push({ file: moveInConfirmation, type: DocumentType.MOVE_IN_CONFIRMATION });
+    }
+
+    try {
+      for (const { file } of typedFiles) {
+        await persistUploadedDocument(file);
+      }
+      const { moveDate, ...data } = parsed.data;
+      const application = await prisma.application.create({
+        data: {
+          type: "RESIDENCE_CHANGE",
+          userId: req.user!.userId,
+          residenceChange: {
+            create: {
+              ...data,
+              moveDate: new Date(`${moveDate}T00:00:00.000Z`),
+            },
+          },
+          documents: {
+            create: typedFiles.map(({ file, type }) => ({
+              originalName: file.originalname,
+              storedName: file.filename,
+              mimeType: file.mimetype,
+              size: file.size,
+              type,
+            })),
+          },
+        },
+        include: { residenceChange: true, documents: { select: publicDocumentSelect } },
+      });
+      applicationsCreated.inc({ type: application.type });
+      return res.status(201).json({ application });
+    } catch (error) {
+      await Promise.all(
+        typedFiles.map(({ file }) => deleteStoredDocument(file.filename).catch(() => undefined))
+      );
+      return next(error);
+    }
+  }
+);
 
 applicationsRouter.post("/dog-tax", async (req, res) => {
   if (req.user!.role !== "CITIZEN") {
@@ -134,6 +245,123 @@ applicationsRouter.post("/certificate-of-conduct", async (req, res) => {
   return res.status(201).json({ application });
 });
 
+applicationsRouter.get("/:id/messages", async (req, res) => {
+  if (req.user!.role !== "CITIZEN") {
+    return res.status(403).json({ error: "Nur Bürger können eigene Nachrichten lesen" });
+  }
+  const application = await prisma.application.findFirst({
+    where: { id: req.params.id, userId: req.user!.userId },
+    select: { id: true },
+applicationsRouter.patch("/:id", async (req, res) => {
+  if (req.user!.role !== "CITIZEN") {
+    return res.status(403).json({ error: "Nur Bürger können eigene Anträge bearbeiten" });
+  }
+
+  const application = await prisma.application.findFirst({
+    where: { id: req.params.id, userId: req.user!.userId },
+  });
+  if (!application) {
+    return res.status(404).json({ error: "Antrag nicht gefunden" });
+  }
+
+  const messages = await prisma.chatMessage.findMany({
+    where: { applicationId: application.id },
+    include: chatMessageInclude,
+    orderBy: { createdAt: "asc" },
+  });
+  await prisma.chatMessage.updateMany({
+    where: {
+      applicationId: application.id,
+      authorId: { not: req.user!.userId },
+      readByCitizenAt: null,
+    },
+    data: { readByCitizenAt: new Date() },
+  });
+  return res.json({ messages });
+});
+
+applicationsRouter.post("/:id/messages", async (req, res) => {
+  if (req.user!.role !== "CITIZEN") {
+    return res.status(403).json({ error: "Nur Bürger können Nachrichten senden" });
+  }
+  const parsed = chatMessageSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Nachricht darf nicht leer sein" });
+  }
+  const application = await prisma.application.findFirst({
+    where: { id: req.params.id, userId: req.user!.userId },
+    select: { id: true },
+  });
+  if (!application) {
+    return res.status(404).json({ error: "Antrag nicht gefunden" });
+  }
+
+  const message = await prisma.chatMessage.create({
+    data: {
+      applicationId: application.id,
+      authorId: req.user!.userId,
+      body: parsed.data.body,
+      readByCitizenAt: new Date(),
+    },
+    include: chatMessageInclude,
+  });
+  return res.status(201).json({ message });
+  if (application.status !== "SUBMITTED") {
+    return res.status(409).json({ error: "Antrag kann nicht mehr bearbeitet werden" });
+  }
+
+  if (application.type === "RESIDENCE_CHANGE") {
+    const parsed = residenceChangeSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: "Validierung fehlgeschlagen",
+        details: parsed.error.flatten(),
+      });
+    }
+    const { moveDate, ...data } = parsed.data;
+    await prisma.residenceChange.update({
+      where: { applicationId: application.id },
+      data: { ...data, moveDate: new Date(`${moveDate}T00:00:00.000Z`) },
+    });
+  } else if (application.type === "DOG_TAX") {
+    const parsed = dogTaxSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: "Validierung fehlgeschlagen",
+        details: parsed.error.flatten(),
+      });
+    }
+    const { dogBirthDate, taxStartDate, ...data } = parsed.data;
+    await prisma.dogTax.update({
+      where: { applicationId: application.id },
+      data: {
+        ...data,
+        dogBirthDate: dogBirthDate ? new Date(`${dogBirthDate}T00:00:00.000Z`) : null,
+        taxStartDate: new Date(`${taxStartDate}T00:00:00.000Z`),
+      },
+    });
+  } else {
+    const parsed = certificateOfConductSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: "Validierung fehlgeschlagen",
+        details: parsed.error.flatten(),
+      });
+    }
+    await prisma.certificateOfConduct.update({
+      where: { applicationId: application.id },
+      data: parsed.data,
+    });
+  }
+
+  const updated = await prisma.application.update({
+    where: { id: application.id },
+    data: { updatedAt: new Date() },
+    include: citizenApplicationInclude,
+  });
+  return res.json({ application: updated });
+});
+
 applicationsRouter.post(
   "/:id/documents",
   async (req, res, next) => {
@@ -181,6 +409,91 @@ applicationsRouter.post(
   }
 );
 
+applicationsRouter.put(
+  "/:applicationId/documents/:documentId",
+  async (req, res, next) => {
+    if (req.user!.role !== "CITIZEN") {
+      return res.status(403).json({ error: "Nur Bürger können Dokumente ersetzen" });
+    }
+    const document = await prisma.document.findFirst({
+      where: {
+        id: req.params.documentId,
+        applicationId: req.params.applicationId,
+        application: { userId: req.user!.userId },
+      },
+      include: { application: { select: { status: true } } },
+    });
+    if (!document) {
+      return res.status(404).json({ error: "Dokument nicht gefunden" });
+    }
+    if (document.application.status !== "SUBMITTED") {
+      return res.status(409).json({ error: "Dokument kann nicht mehr ersetzt werden" });
+    }
+    res.locals.existingDocument = document;
+    return next();
+  },
+  documentUpload.single("document"),
+  async (req, res, next) => {
+    if (!req.file) {
+      return res.status(400).json({ error: "Kein Dokument ausgewählt" });
+    }
+    if (!(await hasValidDocumentSignature(req.file.path, req.file.mimetype))) {
+      await unlink(req.file.path).catch(() => undefined);
+      return res.status(400).json({ error: "Dateiinhalt entspricht nicht dem Dateityp" });
+    }
+
+    const existingDocument = res.locals.existingDocument as {
+      id: string;
+      storedName: string;
+    };
+    try {
+      await persistUploadedDocument(req.file);
+      const document = await prisma.document.update({
+        where: { id: existingDocument.id },
+        data: {
+          originalName: req.file.originalname,
+          storedName: req.file.filename,
+          mimeType: req.file.mimetype,
+          size: req.file.size,
+          uploadedAt: new Date(),
+        },
+        select: publicDocumentSelect,
+      });
+      await deleteStoredDocument(existingDocument.storedName).catch((error) => {
+        console.error("Altes Dokument konnte nicht gelöscht werden", error);
+      });
+      return res.json({ document });
+    } catch (error) {
+      await deleteStoredDocument(req.file.filename).catch(() => undefined);
+      return next(error);
+    }
+  }
+);
+
+applicationsRouter.delete("/:applicationId/documents/:documentId", async (req, res) => {
+  if (req.user!.role !== "CITIZEN") {
+    return res.status(403).json({ error: "Nur Bürger können Dokumente löschen" });
+  }
+  const document = await prisma.document.findFirst({
+    where: {
+      id: req.params.documentId,
+      applicationId: req.params.applicationId,
+      application: { userId: req.user!.userId },
+    },
+    include: { application: { select: { status: true } } },
+  });
+  if (!document) {
+    return res.status(404).json({ error: "Dokument nicht gefunden" });
+  }
+  if (document.application.status !== "SUBMITTED") {
+    return res.status(409).json({ error: "Dokument kann nicht mehr gelöscht werden" });
+  }
+
+  await deleteStoredDocument(document.storedName);
+  await prisma.document.delete({ where: { id: document.id } });
+  return res.status(204).send();
+});
+
 applicationsRouter.get("/:applicationId/documents/:documentId", async (req, res, next) => {
   const document = await prisma.document.findFirst({
     where: {
@@ -198,7 +511,11 @@ applicationsRouter.get("/:applicationId/documents/:documentId", async (req, res,
 
   try {
     const storedDocument = await openStoredDocument(document.storedName);
-    res.attachment(document.originalName);
+    if (req.query.inline === "true") {
+      res.setHeader("Content-Disposition", "inline");
+    } else {
+      res.attachment(document.originalName);
+    }
     res.type(document.mimeType);
     if (storedDocument.contentLength !== undefined) {
       res.setHeader("Content-Length", storedDocument.contentLength);
