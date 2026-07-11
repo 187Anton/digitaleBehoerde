@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import {
   Application,
   AuthResponse,
@@ -22,13 +22,14 @@ import {
   updateApplicationStatus,
   uploadApplicationDocument,
 } from "./api";
+import { ApplicationChat } from "./ApplicationChat";
 import { CaseworkerApplications } from "./CaseworkerApplications";
 import { ResidenceChangeForm } from "./ResidenceChangeForm";
 import { DogTaxForm } from "./DogTaxForm";
 import { ProfileForm } from "./ProfileForm";
 import { CertificateOfConductForm } from "./CertificateOfConductForm";
 type Mode = "login" | "register";
-type View = "catalog" | "service-detail" | "applications" | "profile";
+type View = "catalog" | "service-detail" | "applications" | "messages" | "profile";
 
 const statusLabels: Record<Application["status"], string> = {
   SUBMITTED: "Eingereicht",
@@ -58,6 +59,7 @@ const viewTitles: Record<View, string> = {
   catalog: "Antragskatalog",
   "service-detail": "Antrag stellen",
   applications: "Meine Anträge",
+  messages: "Nachrichten",
   profile: "Mein Profil",
 };
 
@@ -83,6 +85,7 @@ function App(): JSX.Element {
   const [services, setServices] = useState<Service[]>([]);
   const [activeService, setActiveService] = useState<Service | null>(null);
   const [applications, setApplications] = useState<Application[]>([]);
+  const [chatApplication, setChatApplication] = useState<Application | null>(null);
   useEffect(() => {
     fetchCurrentUser()
       .then((response) => setUser(response.user))
@@ -92,21 +95,41 @@ function App(): JSX.Element {
     if (!user) {
       return;
     }
-    if (user.role === "CASEWORKER") {
-      fetchCaseworkerApplications()
-        .then((response) => setApplications(response.applications))
-        .catch(() => setApplications([]));
-      return;
+    const currentUser = user;
+    let isCurrent = true;
+    async function refreshApplications() {
+      try {
+        const response = currentUser.role === "CASEWORKER"
+          ? await fetchCaseworkerApplications()
+          : await fetchApplications();
+        if (isCurrent) {
+          setApplications(response.applications);
+        }
+      } catch {
+        if (isCurrent) {
+          setApplications([]);
+        }
+      }
     }
-    Promise.all([fetchServices(), fetchApplications()])
-      .then(([servicesResponse, applicationsResponse]) => {
-        setServices(servicesResponse.services);
-        setApplications(applicationsResponse.applications);
-      })
-      .catch(() => {
-        setServices([]);
-        setApplications([]);
-      });
+    void refreshApplications();
+    if (currentUser.role === "CITIZEN") {
+      fetchServices()
+        .then((response) => {
+          if (isCurrent) {
+            setServices(response.services);
+          }
+        })
+        .catch(() => {
+          if (isCurrent) {
+            setServices([]);
+          }
+        });
+    }
+    const interval = window.setInterval(() => void refreshApplications(), 30_000);
+    return () => {
+      isCurrent = false;
+      window.clearInterval(interval);
+    };
   }, [user]);
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -134,6 +157,7 @@ function App(): JSX.Element {
       setView("catalog");
       setActiveService(null);
       setApplications([]);
+      setChatApplication(null);
       setMessage("Erfolgreich abgemeldet.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Abmeldung fehlgeschlagen.");
@@ -152,6 +176,19 @@ function App(): JSX.Element {
     setActiveService(null);
     setView("catalog");
   }
+  function openChat(application: Application) {
+    setChatApplication(application);
+    if (user?.role === "CITIZEN") {
+      setView("messages");
+    }
+  }
+  const markChatRead = useCallback((applicationId: string) => {
+    setApplications((current) =>
+      current.map((application) =>
+        application.id === applicationId ? { ...application, unreadChatMessages: 0 } : application
+      )
+    );
+  }, []);
   async function handleResidenceChange(data: ResidenceChangeInput, document: File) {
     setIsLoading(true);
     setMessage("");
@@ -347,6 +384,10 @@ function App(): JSX.Element {
   const topbarTitle = user.role === "CASEWORKER" ? "Antragsbearbeitung" : viewTitles[view];
   const completedApplications = applications.filter((application) => application.status === "APPROVED").length;
   const openApplications = applications.filter((application) => application.status !== "APPROVED").length;
+  const unreadChatMessages = applications.reduce(
+    (count, application) => count + (application.unreadChatMessages ?? 0),
+    0
+  );
 
   return (
     <div className="app-shell">
@@ -373,6 +414,16 @@ function App(): JSX.Element {
               onClick={() => setView("applications")}
             >
               Meine Anträge ({applications.length})
+            </button>
+            <button
+              className={`nav-item ${view === "messages" ? "active" : ""}`}
+              type="button"
+              onClick={() => {
+                setChatApplication(null);
+                setView("messages");
+              }}
+            >
+              Nachrichten ({unreadChatMessages})
             </button>
             <button
               className={`nav-item ${view === "profile" ? "active" : ""}`}
@@ -497,6 +548,12 @@ function App(): JSX.Element {
                   <li className="application-row" key={application.id}>
                     <div>
                       <strong>{applicationTypeLabels[application.type]}</strong>
+                      {(application.unreadChatMessages ?? 0) > 0 ? (
+                        <span className="unread-chat-badge">
+                          {application.unreadChatMessages} neue Nachricht
+                          {application.unreadChatMessages === 1 ? "" : "en"}
+                        </span>
+                      ) : null}
                       <p>
                         Eingereicht am {new Date(application.createdAt).toLocaleDateString("de-DE")}
                         {application.residenceChange
@@ -545,11 +602,55 @@ function App(): JSX.Element {
                         </label>
                       ) : null}
                     </div>
-                    <span className={statusClassName(application.status)}>{statusLabels[application.status]}</span>
+                    <div className="application-actions">
+                      <span className={statusClassName(application.status)}>{statusLabels[application.status]}</span>
+                      <button className="ghost-button" type="button" onClick={() => openChat(application)}>
+                        Nachrichten
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>
             </section>
+          ) : null}
+
+          {user.role === "CITIZEN" && view === "messages" ? (
+            chatApplication ? (
+              <ApplicationChat
+                application={chatApplication}
+                user={user}
+                onClose={() => setChatApplication(null)}
+                onMessagesRead={markChatRead}
+              />
+            ) : (
+              <section className="section">
+                <div className="section-header">
+                  <div>
+                    <h2>Nachrichten zu meinen Anträgen</h2>
+                    <span>{unreadChatMessages} ungelesene Nachrichten</span>
+                  </div>
+                </div>
+                {applications.length === 0 ? (
+                  <p className="muted">Noch keine Anträge vorhanden.</p>
+                ) : (
+                  <ul className="chat-inbox-list">
+                    {applications.map((application) => (
+                      <li key={application.id}>
+                        <div>
+                          <strong>{applicationTypeLabels[application.type]}</strong>
+                          <span>
+                            {application.unreadChatMessages ?? 0} ungelesene Nachrichten
+                          </span>
+                        </div>
+                        <button className="ghost-button" type="button" onClick={() => openChat(application)}>
+                          Chat öffnen
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            )
           ) : null}
 
           {user.role === "CITIZEN" && view === "profile" ? (
@@ -569,11 +670,21 @@ function App(): JSX.Element {
           ) : null}
 
           {user.role === "CASEWORKER" ? (
-            <CaseworkerApplications
-              applications={applications}
-              isUpdating={isLoading}
-              onStatusChange={handleStatusChange}
-            />
+            chatApplication ? (
+              <ApplicationChat
+                application={chatApplication}
+                user={user}
+                onClose={() => setChatApplication(null)}
+                onMessagesRead={markChatRead}
+              />
+            ) : (
+              <CaseworkerApplications
+                applications={applications}
+                isUpdating={isLoading}
+                onStatusChange={handleStatusChange}
+                onOpenChat={openChat}
+              />
+            )
           ) : null}
         </main>
       </div>

@@ -73,6 +73,21 @@ export type ApplicationDocument = {
   size: number;
   uploadedAt: string;
 };
+export type ChatMessage = {
+  id: string;
+  applicationId: string;
+  authorId: string;
+  body: string;
+  createdAt: string;
+  readByCitizenAt: string | null;
+  readByCaseworkerAt: string | null;
+  author: {
+    id: string;
+    role: "CITIZEN" | "CASEWORKER";
+    firstName: string | null;
+    lastName: string | null;
+  };
+};
 export type Application = {
   id: string;
   type: "RESIDENCE_CHANGE" | "DOG_TAX" | "CERTIFICATE_OF_CONDUCT";
@@ -86,6 +101,7 @@ export type Application = {
     | (CertificateOfConductInput & { id: string; applicationId: string })
     | null;
   documents: ApplicationDocument[];
+  unreadChatMessages?: number;
   user?: {
     id: string;
     email: string;
@@ -202,4 +218,26 @@ export function updateApplicationStatus(
       body: JSON.stringify({ status }),
     }
   );
+}
+export function fetchApplicationChat(
+  applicationId: string,
+  role: AuthUser["role"]
+): Promise<{ messages: ChatMessage[] }> {
+  const path = role === "CASEWORKER"
+    ? `/api/caseworker/applications/${encodeURIComponent(applicationId)}/messages`
+    : `/api/applications/${encodeURIComponent(applicationId)}/messages`;
+  return request<{ messages: ChatMessage[] }>(path);
+}
+export function sendApplicationChatMessage(
+  applicationId: string,
+  role: AuthUser["role"],
+  body: string
+): Promise<{ message: ChatMessage }> {
+  const path = role === "CASEWORKER"
+    ? `/api/caseworker/applications/${encodeURIComponent(applicationId)}/messages`
+    : `/api/applications/${encodeURIComponent(applicationId)}/messages`;
+  return request<{ message: ChatMessage }>(path, {
+    method: "POST",
+    body: JSON.stringify({ body }),
+  });
 }

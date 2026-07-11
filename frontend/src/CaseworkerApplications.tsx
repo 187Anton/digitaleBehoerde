@@ -5,6 +5,7 @@ type Props = {
   applications: Application[];
   isUpdating: boolean;
   onStatusChange: (applicationId: string, status: NextStatus) => Promise<void>;
+  onOpenChat: (application: Application) => void;
 };
 
 const statusLabels: Record<ApplicationStatus, string> = {
@@ -45,6 +46,7 @@ export function CaseworkerApplications({
   applications,
   isUpdating,
   onStatusChange,
+  onOpenChat,
 }: Props): JSX.Element {
   return (
     <section className="section stack">
@@ -135,6 +137,13 @@ export function CaseworkerApplications({
               <p>Keine Dokumente vorhanden.</p>
             )}
             <div className="button-row">
+              <button
+                className="ghost-button"
+                type="button"
+                onClick={() => onOpenChat(application)}
+              >
+                Nachrichten ({application.unreadChatMessages ?? 0})
+              </button>
               {application.status === "SUBMITTED" ? (
                 <button
                   className="primary-button"

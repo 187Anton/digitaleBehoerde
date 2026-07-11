@@ -499,6 +499,112 @@ a {
   color: var(--amber);
 }
 
+.application-actions {
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+}
+
+.unread-chat-badge {
+  display: inline-flex;
+  margin-top: 8px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.chat-inbox-list {
+  display: grid;
+  gap: 12px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.chat-inbox-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.chat-inbox-list li > div {
+  display: grid;
+  gap: 5px;
+}
+
+.chat-inbox-list span,
+.chat-toolbar span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.chat-shell {
+  display: grid;
+  gap: 18px;
+}
+
+.chat-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.chat-message-list {
+  display: grid;
+  gap: 12px;
+  min-height: 180px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.chat-message {
+  width: min(82%, 680px);
+  display: grid;
+  gap: 7px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-soft);
+}
+
+.chat-message.own {
+  justify-self: end;
+  border-color: #9cc4ef;
+  background: var(--primary-soft);
+}
+
+.chat-message-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.chat-message p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.chat-form {
+  display: grid;
+  gap: 12px;
+}
+
+.chat-form .primary-button {
+  justify-self: end;
+}
+
 .document-row,
 .upload-box {
   display: grid;
@@ -723,7 +829,9 @@ a {
   }
 
   .topbar-actions,
-  .detail-head {
+  .detail-head,
+  .chat-toolbar,
+  .chat-inbox-list li {
     align-items: stretch;
     flex-direction: column;
     width: 100%;
@@ -756,5 +864,13 @@ a {
   .detail-list {
     grid-template-columns: 1fr;
     align-items: stretch;
+  }
+
+  .chat-message {
+    width: 100%;
+  }
+
+  .chat-form .primary-button {
+    justify-self: stretch;
   }
 }
