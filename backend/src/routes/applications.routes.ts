@@ -352,7 +352,11 @@ applicationsRouter.get("/:applicationId/documents/:documentId", async (req, res,
 
   try {
     const storedDocument = await openStoredDocument(document.storedName);
-    res.attachment(document.originalName);
+    if (req.query.inline === "true") {
+      res.setHeader("Content-Disposition", "inline");
+    } else {
+      res.attachment(document.originalName);
+    }
     res.type(document.mimeType);
     if (storedDocument.contentLength !== undefined) {
       res.setHeader("Content-Length", storedDocument.contentLength);

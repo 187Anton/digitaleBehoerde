@@ -230,6 +230,9 @@ export async function deleteApplicationDocument(
 export function applicationDocumentUrl(applicationId: string, documentId: string): string {
   return `${API_BASE_URL}/api/applications/${encodeURIComponent(applicationId)}/documents/${encodeURIComponent(documentId)}`;
 }
+export function applicationDocumentPreviewUrl(applicationId: string, documentId: string): string {
+  return `${applicationDocumentUrl(applicationId, documentId)}?inline=true`;
+}
 export function updateProfile(payload: ProfileUpdateInput): Promise<AuthResponse> {
   return request<AuthResponse>("/api/profile", {
     method: "PATCH",
