@@ -75,7 +75,7 @@ function App(): JSX.Element {
   const [user, setUser] = useState<AuthResponse["user"] | null>(null);
   const [email, setEmail] = useState("buerger@example.com");
   const [password, setPassword] = useState("password123");
-  const [passwordConfirmation, setPasswordConfirmation] = useState("");
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [message, setMessage] = useState("");
@@ -323,23 +323,22 @@ function App(): JSX.Element {
             </label>
             <label className="field">
               Passwort
-              <input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                minLength={mode === "register" ? 8 : undefined}
-                aria-invalid={passwordTooShort}
-                aria-describedby={mode === "register" ? "password-requirements" : undefined}
-                required
-              />
-              {mode === "register" ? (
-                <span
-                  id="password-requirements"
-                  className={passwordTooShort ? "field-error" : undefined}
+              <span className="password-input">
+                <input
+                  type={isPasswordVisible ? "text" : "password"}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
+                />
+                <button
+                  className="password-toggle"
+                  type="button"
+                  aria-pressed={isPasswordVisible}
+                  onClick={() => setIsPasswordVisible((current) => !current)}
                 >
-                  Das Passwort muss mindestens 8 Zeichen lang sein.
-                </span>
-              ) : null}
+                  {isPasswordVisible ? "Verbergen" : "Anzeigen"}
+                </button>
+              </span>
             </label>
             {mode === "register" ? (
               <>
