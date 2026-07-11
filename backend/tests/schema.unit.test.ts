@@ -66,10 +66,12 @@ describe("residenceChangeSchema", () => {
     ).toBe(false);
   });
 
-  it("lehnt ungueltige Kalenderdaten ab", () => {
-    expect(
-      residenceChangeSchema.safeParse({ ...validPayload, moveDate: "2026-02-30" }).success
-    ).toBe(false);
+  it("lehnt ungültige Kalenderdaten ab", () => {
+    const result = residenceChangeSchema.safeParse({ ...validPayload, moveDate: "2026-02-30" });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.message).toBe("Einzugsdatum ist ungültig");
+    }
   });
 
   it("begrenzt die Haushaltsgroesse", () => {

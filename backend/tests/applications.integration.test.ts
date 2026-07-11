@@ -179,7 +179,7 @@ describe("Antrags-Endpunkte (Integration)", () => {
     expect(await prisma.document.count()).toBe(0);
   });
 
-  it("lehnt Dokumente ueber 5 MB ab", async () => {
+  it("lehnt Dokumente über 5 MB ab", async () => {
     const { cookie } = await createUser();
     const created = await request(app)
       .post("/api/applications/residence-change")
@@ -195,6 +195,7 @@ describe("Antrags-Endpunkte (Integration)", () => {
       });
 
     expect(upload.status).toBe(400);
+    expect(upload.body.error).toBe("Dokument darf maximal 5 MB groß sein.");
     expect(await prisma.document.count()).toBe(0);
   });
 
