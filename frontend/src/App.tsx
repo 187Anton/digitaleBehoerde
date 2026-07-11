@@ -36,7 +36,14 @@ import { CertificateOfConductForm } from "./CertificateOfConductForm";
 import { ApplicationCommentThread } from "./ApplicationCommentThread";
 import { CitizenDocuments } from "./CitizenDocuments";
 type Mode = "login" | "register";
-type View = "catalog" | "service-detail" | "applications" | "edit-application" | "profile";
+type View =
+  | "catalog"
+  | "service-detail"
+  | "applications"
+  | "messages"
+  | "documents"
+  | "edit-application"
+  | "profile";
 
 const statusLabels: Record<Application["status"], string> = {
   SUBMITTED: "Eingereicht",
@@ -58,6 +65,8 @@ const serviceGlyphs: Record<Service["type"], string> = {
   RESIDENCE_CHANGE: "⌂",
   DOG_TAX: "✦",
   CERTIFICATE_OF_CONDUCT: "▤",
+};
+
 const documentTypeLabels: Record<Application["documents"][number]["type"], string> = {
   OTHER: "Weiteres Dokument",
   IDENTITY_DOCUMENT: "Personalausweis",
@@ -95,8 +104,8 @@ function App(): JSX.Element {
   const [mode, setMode] = useState<Mode>("login");
   const [user, setUser] = useState<AuthResponse["user"] | null>(null);
   const [email, setEmail] = useState("buerger@example.com");
-  const [password, setPassword] = useState("");
   const [password, setPassword] = useState("password123");
+  const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -224,14 +233,12 @@ function App(): JSX.Element {
       )
     );
   }, []);
-  async function handleResidenceChange(data: ResidenceChangeInput, document: File) {
   async function handleResidenceChange(
     data: ResidenceChangeInput,
-    documents: ResidenceChangeDocuments
+    documents?: ResidenceChangeDocuments
   ) {
-  async function handleResidenceChange(data: ResidenceChangeInput, document: File | null) {
-    if (!document) {
-      setMessage("Bitte wählen Sie ein Nachweisdokument aus.");
+    if (!documents) {
+      setMessage("Bitte wählen Sie die erforderlichen Nachweise aus.");
       return;
     }
     setIsLoading(true);
@@ -487,13 +494,6 @@ function App(): JSX.Element {
             </label>
             <label className="field">
               Passwort
-              <input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                autoComplete={mode === "login" ? "off" : "new-password"}
-                required
-              />
               <span className="password-input">
                 <input
                   type={isPasswordVisible ? "text" : "password"}
@@ -562,6 +562,9 @@ function App(): JSX.Element {
   const openApplications = applications.filter((application) => application.status !== "APPROVED").length;
   const unreadChatMessages = applications.reduce(
     (count, application) => count + (application.unreadChatMessages ?? 0),
+    0
+  );
+
   const documentCount = applications.reduce(
     (count, application) => count + application.documents.length,
     0
@@ -605,6 +608,8 @@ function App(): JSX.Element {
             >
               <span className="nav-icon" aria-hidden="true">◌</span>
               Nachrichten ({unreadChatMessages})
+            </button>
+            <button
               className={`nav-item ${view === "documents" ? "active" : ""}`}
               type="button"
               onClick={() => setView("documents")}
@@ -994,14 +999,9 @@ function App(): JSX.Element {
                 isUpdating={isLoading}
                 onStatusChange={handleStatusChange}
                 onOpenChat={openChat}
+                onComment={handleApplicationComment}
               />
             )
-            <CaseworkerApplications
-              applications={applications}
-              isUpdating={isLoading}
-              onStatusChange={handleStatusChange}
-              onComment={handleApplicationComment}
-            />
           ) : null}
         </main>
       </div>

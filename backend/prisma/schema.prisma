@@ -89,7 +89,6 @@ model ChatMessage {
   @@map("chat_messages")
 }
 
-model Document {
 model ApplicationComment {
   id            String      @id @default(uuid())
   applicationId String      @map("application_id")

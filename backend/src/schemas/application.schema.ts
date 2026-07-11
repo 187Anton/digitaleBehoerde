@@ -61,6 +61,10 @@ export const applicationStatusSchema = z.object({
   status: z.enum(["IN_REVIEW", "APPROVED", "REJECTED"]),
 });
 
+export const chatMessageSchema = z.object({
+  body: z.string().trim().min(1, "Nachricht darf nicht leer sein").max(2000),
+});
+
 export const applicationCommentSchema = z.object({
   body: z.string().trim().min(1, "Kommentar darf nicht leer sein").max(2000),
 });
