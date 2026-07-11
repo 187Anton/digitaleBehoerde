@@ -1,3 +1,5 @@
+import { applicationDocumentUrl, type Application, type ApplicationStatus } from "./api";
+import { ApplicationCommentThread } from "./ApplicationCommentThread";
 import {
   applicationDocumentPreviewUrl,
   applicationDocumentUrl,
@@ -11,6 +13,7 @@ type Props = {
   applications: Application[];
   isUpdating: boolean;
   onStatusChange: (applicationId: string, status: NextStatus) => Promise<void>;
+  onComment: (applicationId: string, body: string) => Promise<boolean>;
 };
 
 const statusLabels: Record<ApplicationStatus, string> = {
@@ -85,6 +88,7 @@ export function CaseworkerApplications({
   applications,
   isUpdating,
   onStatusChange,
+  onComment,
 }: Props): JSX.Element {
   return (
     <section className="section stack">
@@ -199,6 +203,12 @@ export function CaseworkerApplications({
             ) : (
               <p>Keine Dokumente vorhanden.</p>
             )}
+            <ApplicationCommentThread
+              comments={application.comments ?? []}
+              canWrite
+              isSubmitting={isUpdating}
+              onSubmit={(body) => onComment(application.id, body)}
+            />
             <div className="button-row">
               {application.status === "SUBMITTED" ? (
                 <button

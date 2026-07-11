@@ -83,6 +83,19 @@ export type ApplicationDocument = {
   size: number;
   uploadedAt: string;
 };
+export type ApplicationComment = {
+  id: string;
+  applicationId: string;
+  authorId: string;
+  body: string;
+  createdAt: string;
+  author: {
+    id: string;
+    role: "CITIZEN" | "CASEWORKER";
+    firstName: string | null;
+    lastName: string | null;
+  };
+};
 export type Application = {
   id: string;
   type: "RESIDENCE_CHANGE" | "DOG_TAX" | "CERTIFICATE_OF_CONDUCT";
@@ -96,6 +109,7 @@ export type Application = {
     | (CertificateOfConductInput & { id: string; applicationId: string })
     | null;
   documents: ApplicationDocument[];
+  comments?: ApplicationComment[];
   user?: {
     id: string;
     email: string;
@@ -277,6 +291,18 @@ export function updateApplicationStatus(
     {
       method: "PATCH",
       body: JSON.stringify({ status }),
+    }
+  );
+}
+export function addApplicationComment(
+  applicationId: string,
+  body: string
+): Promise<{ comment: ApplicationComment }> {
+  return request<{ comment: ApplicationComment }>(
+    `/api/caseworker/applications/${encodeURIComponent(applicationId)}/comments`,
+    {
+      method: "POST",
+      body: JSON.stringify({ body }),
     }
   );
 }

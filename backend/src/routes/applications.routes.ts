@@ -36,6 +36,20 @@ applicationsRouter.use(requireAuth);
 applicationsRouter.get("/", async (req, res) => {
   const applications = await prisma.application.findMany({
     where: { userId: req.user!.userId },
+    include: {
+      residenceChange: true,
+      dogTax: true,
+      certificateOfConduct: true,
+      documents: { select: publicDocumentSelect },
+      comments: {
+        include: {
+          author: {
+            select: { id: true, role: true, firstName: true, lastName: true },
+          },
+        },
+        orderBy: { createdAt: "asc" },
+      },
+    },
     include: citizenApplicationInclude,
     orderBy: { createdAt: "desc" },
   });

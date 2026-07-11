@@ -60,3 +60,7 @@ export type CertificateOfConductInput = z.infer<typeof certificateOfConductSchem
 export const applicationStatusSchema = z.object({
   status: z.enum(["IN_REVIEW", "APPROVED", "REJECTED"]),
 });
+
+export const applicationCommentSchema = z.object({
+  body: z.string().trim().min(1, "Kommentar darf nicht leer sein").max(2000),
+});

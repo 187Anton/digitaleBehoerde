@@ -79,6 +79,47 @@ describe("Sachbearbeiter-Endpunkte (Integration)", () => {
     expect(res.status).toBe(403);
   });
 
+  it("erlaubt Sachbearbeitern Kommentare, die Bürger lesen können", async () => {
+    const citizen = await createUser("CITIZEN");
+    const caseworker = await createUser("CASEWORKER");
+    const application = await createApplication(citizen.user.id);
+
+    const created = await request(app)
+      .post(`/api/caseworker/applications/${application.id}/comments`)
+      .set("Cookie", caseworker.cookie)
+      .send({ body: "  Bitte reichen Sie die Rückseite nach.  " });
+
+    expect(created.status).toBe(201);
+    expect(created.body.comment).toMatchObject({
+      applicationId: application.id,
+      authorId: caseworker.user.id,
+      body: "Bitte reichen Sie die Rückseite nach.",
+      author: { id: caseworker.user.id, role: "CASEWORKER" },
+    });
+
+    const citizenView = await request(app)
+      .get("/api/applications")
+      .set("Cookie", citizen.cookie);
+    expect(citizenView.status).toBe(200);
+    expect(citizenView.body.applications[0].comments).toHaveLength(1);
+    expect(citizenView.body.applications[0].comments[0].body).toBe(
+      "Bitte reichen Sie die Rückseite nach."
+    );
+  });
+
+  it("verweigert Bürgern das Schreiben von Kommentaren", async () => {
+    const citizen = await createUser("CITIZEN");
+    const application = await createApplication(citizen.user.id);
+
+    const response = await request(app)
+      .post(`/api/caseworker/applications/${application.id}/comments`)
+      .set("Cookie", citizen.cookie)
+      .send({ body: "Dieser Kommentar ist nicht erlaubt." });
+
+    expect(response.status).toBe(403);
+    expect(await prisma.applicationComment.count()).toBe(0);
+  });
+
   it("verlangt eine Anmeldung", async () => {
     const res = await request(app).get("/api/caseworker/applications");
     expect(res.status).toBe(401);
