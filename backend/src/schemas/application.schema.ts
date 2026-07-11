@@ -49,6 +49,10 @@ export type DogTaxInput = z.infer<typeof dogTaxSchema>;
 export const certificateOfConductSchema = z.object({
   purpose: requiredText,
   deliveryType: z.enum(["PRIVATE", "AUTHORITY"]),
+  deliveryRecipient: requiredText,
+  deliveryStreet: requiredText,
+  deliveryPostalCode: postalCode,
+  deliveryCity: requiredText,
 });
 
 export type CertificateOfConductInput = z.infer<typeof certificateOfConductSchema>;

@@ -153,6 +153,11 @@ export function CaseworkerApplications({
                 <dd>{certificate.purpose}</dd>
                 <dt>Zustellung</dt>
                 <dd>{deliveryTypeLabels[certificate.deliveryType]}</dd>
+                <dt>Versandanschrift</dt>
+                <dd>
+                  {certificate.deliveryRecipient}, {certificate.deliveryStreet},{" "}
+                  {certificate.deliveryPostalCode} {certificate.deliveryCity}
+                </dd>
               </dl>
             ) : null}
             <h4>Dokumente</h4>

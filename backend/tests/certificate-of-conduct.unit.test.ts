@@ -4,6 +4,10 @@ import { certificateOfConductSchema } from "../src/schemas/application.schema.js
 const validBody = {
   purpose: "Vorlage beim Arbeitgeber",
   deliveryType: "PRIVATE",
+  deliveryRecipient: "Bea Bürger",
+  deliveryStreet: "Hauptstraße 1",
+  deliveryPostalCode: "14467",
+  deliveryCity: "Potsdam",
 };
 
 describe("certificateOfConductSchema", () => {
@@ -30,5 +34,14 @@ describe("certificateOfConductSchema", () => {
       deliveryType: "EMAIL",
     });
     expect(result.success).toBe(false);
+  });
+
+  it("verlangt eine vollständige Versandanschrift", () => {
+    expect(
+      certificateOfConductSchema.safeParse({ ...validBody, deliveryPostalCode: "1446" }).success
+    ).toBe(false);
+    expect(
+      certificateOfConductSchema.safeParse({ ...validBody, deliveryRecipient: "" }).success
+    ).toBe(false);
   });
 });

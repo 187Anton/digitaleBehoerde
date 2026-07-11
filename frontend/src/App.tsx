@@ -621,7 +621,16 @@ function App(): JSX.Element {
                 <DogTaxForm isSubmitting={isLoading} onSubmit={handleDogTax} />
               ) : null}
               {activeService.type === "CERTIFICATE_OF_CONDUCT" ? (
-                <CertificateOfConductForm isSubmitting={isLoading} onSubmit={handleCertificateOfConduct} />
+                <CertificateOfConductForm
+                  isSubmitting={isLoading}
+                  initialData={{
+                    deliveryRecipient: [user.firstName, user.lastName].filter(Boolean).join(" "),
+                    deliveryStreet: user.street ?? "",
+                    deliveryPostalCode: user.postalCode ?? "",
+                    deliveryCity: user.city ?? "",
+                  }}
+                  onSubmit={handleCertificateOfConduct}
+                />
               ) : null}
             </section>
           ) : null}
@@ -697,7 +706,7 @@ function App(): JSX.Element {
                           ? ` · Hund: ${application.dogTax.dogName}, Steuerbeginn ${new Date(application.dogTax.taxStartDate).toLocaleDateString("de-DE")}`
                           : ""}
                         {application.certificateOfConduct
-                          ? ` · Zweck: ${application.certificateOfConduct.purpose}`
+                          ? ` · Zweck: ${application.certificateOfConduct.purpose} · Versand an ${application.certificateOfConduct.deliveryRecipient}, ${application.certificateOfConduct.deliveryStreet}, ${application.certificateOfConduct.deliveryPostalCode} ${application.certificateOfConduct.deliveryCity}`
                           : ""}
                       </p>
                       {application.documents.length > 0 ? (
@@ -753,7 +762,8 @@ function App(): JSX.Element {
                       ) : (
                         <p>Kein Dokument vorhanden.</p>
                       )}
-                      {application.status === "SUBMITTED" ? (
+                      {application.status === "SUBMITTED"
+                      && application.type !== "CERTIFICATE_OF_CONDUCT" ? (
                         <label className="field upload-box">
                           Weiteres Dokument hochladen
                           <input

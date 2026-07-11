@@ -68,6 +68,10 @@ export type DogTaxInput = {
 export type CertificateOfConductInput = {
   purpose: string;
   deliveryType: "PRIVATE" | "AUTHORITY";
+  deliveryRecipient: string;
+  deliveryStreet: string;
+  deliveryPostalCode: string;
+  deliveryCity: string;
 };
 export type ApplicationStatus = "SUBMITTED" | "IN_REVIEW" | "APPROVED" | "REJECTED";
 export type ApplicationDocument = {
