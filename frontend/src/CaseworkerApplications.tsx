@@ -1,4 +1,10 @@
-import { applicationDocumentUrl, type Application, type ApplicationStatus } from "./api";
+import {
+  applicationDocumentPreviewUrl,
+  applicationDocumentUrl,
+  type Application,
+  type ApplicationDocument,
+  type ApplicationStatus,
+} from "./api";
 
 type NextStatus = Exclude<ApplicationStatus, "SUBMITTED">;
 type Props = {
@@ -45,6 +51,34 @@ function statusClassName(status: ApplicationStatus): string {
 function documentBadgeLabel(fileName: string): string {
   const extension = fileName.split(".").pop()?.trim().toUpperCase();
   return extension && extension.length <= 4 ? extension : "Datei";
+}
+
+function documentPreview(
+  applicationId: string,
+  document: ApplicationDocument
+): JSX.Element | null {
+  const previewUrl = applicationDocumentPreviewUrl(applicationId, document.id);
+  if (document.mimeType === "application/pdf") {
+    return (
+      <iframe
+        className="document-preview document-preview-pdf"
+        src={previewUrl}
+        title={`Vorschau von ${document.originalName}`}
+        loading="lazy"
+      />
+    );
+  }
+  if (document.mimeType === "image/jpeg" || document.mimeType === "image/png") {
+    return (
+      <img
+        className="document-preview document-preview-image"
+        src={previewUrl}
+        alt={`Vorschau von ${document.originalName}`}
+        loading="lazy"
+      />
+    );
+  }
+  return null;
 }
 
 export function CaseworkerApplications({
@@ -137,6 +171,23 @@ export function CaseworkerApplications({
                       </a>
                       <span>{documentTypeLabels[document.type]}</span>
                     </div>
+                  <li className="document-preview-card" key={document.id}>
+                    <div className="document-preview-header">
+                      <div className="doc-icon">{documentBadgeLabel(document.originalName)}</div>
+                      <div>
+                        <strong>{document.originalName}</strong>
+                        <a
+                          href={applicationDocumentUrl(application.id, document.id)}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Herunterladen
+                        </a>
+                      </div>
+                    </div>
+                    {documentPreview(application.id, document) ?? (
+                      <p>Für diesen Dateityp ist keine Vorschau verfügbar.</p>
+                    )}
                   </li>
                 ))}
               </ul>

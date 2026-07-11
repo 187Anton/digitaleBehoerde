@@ -179,6 +179,18 @@ export function createCertificateOfConduct(
     body: JSON.stringify(payload),
   });
 }
+export function updateApplication(
+  applicationId: string,
+  payload: ResidenceChangeInput | DogTaxInput | CertificateOfConductInput
+): Promise<{ application: Application }> {
+  return request<{ application: Application }>(
+    `/api/applications/${encodeURIComponent(applicationId)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }
+  );
+}
 export async function uploadApplicationDocument(
   applicationId: string,
   file: File
@@ -199,8 +211,48 @@ export async function uploadApplicationDocument(
   }
   return response.json() as Promise<{ document: ApplicationDocument }>;
 }
+export async function replaceApplicationDocument(
+  applicationId: string,
+  documentId: string,
+  file: File
+): Promise<{ document: ApplicationDocument }> {
+  const formData = new FormData();
+  formData.append("document", file);
+  const response = await fetch(
+    `${API_BASE_URL}/api/applications/${encodeURIComponent(applicationId)}/documents/${encodeURIComponent(documentId)}`,
+    {
+      method: "PUT",
+      credentials: "include",
+      body: formData,
+    }
+  );
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(body?.error ?? "Dokument konnte nicht ersetzt werden.");
+  }
+  return response.json() as Promise<{ document: ApplicationDocument }>;
+}
+export async function deleteApplicationDocument(
+  applicationId: string,
+  documentId: string
+): Promise<void> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/applications/${encodeURIComponent(applicationId)}/documents/${encodeURIComponent(documentId)}`,
+    {
+      method: "DELETE",
+      credentials: "include",
+    }
+  );
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(body?.error ?? "Dokument konnte nicht gelöscht werden.");
+  }
+}
 export function applicationDocumentUrl(applicationId: string, documentId: string): string {
   return `${API_BASE_URL}/api/applications/${encodeURIComponent(applicationId)}/documents/${encodeURIComponent(documentId)}`;
+}
+export function applicationDocumentPreviewUrl(applicationId: string, documentId: string): string {
+  return `${applicationDocumentUrl(applicationId, documentId)}?inline=true`;
 }
 export function updateProfile(payload: ProfileUpdateInput): Promise<AuthResponse> {
   return request<AuthResponse>("/api/profile", {

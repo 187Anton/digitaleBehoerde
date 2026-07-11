@@ -4,18 +4,26 @@ import type { ResidenceChangeDocuments, ResidenceChangeInput } from "./api";
 type Props = {
   isSubmitting: boolean;
   onSubmit: (data: ResidenceChangeInput, documents: ResidenceChangeDocuments) => Promise<void>;
+  initialData?: ResidenceChangeInput;
+  isEditing?: boolean;
+  onSubmit: (data: ResidenceChangeInput, document: File | null) => Promise<void>;
 };
 
-export function ResidenceChangeForm({ isSubmitting, onSubmit }: Props): JSX.Element {
+export function ResidenceChangeForm({
+  isSubmitting,
+  initialData,
+  isEditing = false,
+  onSubmit,
+}: Props): JSX.Element {
   const [form, setForm] = useState<ResidenceChangeInput>({
-    moveDate: "",
-    oldStreet: "",
-    oldPostalCode: "",
-    oldCity: "",
-    newStreet: "",
-    newPostalCode: "",
-    newCity: "",
-    householdSize: 1,
+    moveDate: initialData?.moveDate.slice(0, 10) ?? "",
+    oldStreet: initialData?.oldStreet ?? "",
+    oldPostalCode: initialData?.oldPostalCode ?? "",
+    oldCity: initialData?.oldCity ?? "",
+    newStreet: initialData?.newStreet ?? "",
+    newPostalCode: initialData?.newPostalCode ?? "",
+    newCity: initialData?.newCity ?? "",
+    householdSize: initialData?.householdSize ?? 1,
   });
   const [identityDocument, setIdentityDocument] = useState<File | null>(null);
   const [landlordConfirmation, setLandlordConfirmation] = useState<File | null>(null);
@@ -34,6 +42,7 @@ export function ResidenceChangeForm({ isSubmitting, onSubmit }: Props): JSX.Elem
         ...(moveInConfirmation ? { moveInConfirmation } : {}),
       });
     }
+    await onSubmit(form, document);
   }
 
   return (
@@ -139,6 +148,17 @@ export function ResidenceChangeForm({ isSubmitting, onSubmit }: Props): JSX.Elem
           required
         />
       </label>
+      {!isEditing ? (
+        <label className="field upload-box">
+          Nachweisdokument (PDF, JPEG oder PNG, maximal 5 MB)
+          <input
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+            onChange={(event) => setDocument(event.target.files?.[0] ?? null)}
+            required
+          />
+        </label>
+      ) : null}
 
       <label className="field upload-box">
         Wohnungsgeberbestätigung (Pflicht, PDF, JPEG oder PNG, maximal 5 MB)
@@ -161,7 +181,11 @@ export function ResidenceChangeForm({ isSubmitting, onSubmit }: Props): JSX.Elem
 
       <div className="button-row">
         <button className="primary-button" type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Antrag wird gesendet ..." : "Wohnsitzummeldung absenden"}
+          {isSubmitting
+            ? "Antrag wird gespeichert ..."
+            : isEditing
+              ? "Änderungen speichern"
+              : "Wohnsitzummeldung absenden"}
         </button>
       </div>
     </form>
