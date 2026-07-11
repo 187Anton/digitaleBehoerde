@@ -3,19 +3,26 @@ import type { DogTaxInput } from "./api";
 
 type Props = {
   isSubmitting: boolean;
+  initialData?: DogTaxInput;
+  isEditing?: boolean;
   onSubmit: (data: DogTaxInput, document: File | null) => Promise<void>;
 };
 
-export function DogTaxForm({ isSubmitting, onSubmit }: Props): JSX.Element {
+export function DogTaxForm({
+  isSubmitting,
+  initialData,
+  isEditing = false,
+  onSubmit,
+}: Props): JSX.Element {
   const [form, setForm] = useState<DogTaxInput>({
-    dogName: "",
-    dogBreed: "",
-    dogBirthDate: "",
-    chipNumber: "",
-    ownerStreet: "",
-    ownerPostalCode: "",
-    ownerCity: "",
-    taxStartDate: "",
+    dogName: initialData?.dogName ?? "",
+    dogBreed: initialData?.dogBreed ?? "",
+    dogBirthDate: initialData?.dogBirthDate?.slice(0, 10) ?? "",
+    chipNumber: initialData?.chipNumber ?? "",
+    ownerStreet: initialData?.ownerStreet ?? "",
+    ownerPostalCode: initialData?.ownerPostalCode ?? "",
+    ownerCity: initialData?.ownerCity ?? "",
+    taxStartDate: initialData?.taxStartDate.slice(0, 10) ?? "",
   });
   const [document, setDocument] = useState<File | null>(null);
 
@@ -126,18 +133,24 @@ export function DogTaxForm({ isSubmitting, onSubmit }: Props): JSX.Element {
         />
       </label>
 
-      <label className="field upload-box">
-        Nachweisdokument (optional, PDF, JPEG oder PNG, maximal 5 MB)
-        <input
-          type="file"
-          accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-          onChange={(event) => setDocument(event.target.files?.[0] ?? null)}
-        />
-      </label>
+      {!isEditing ? (
+        <label className="field upload-box">
+          Nachweisdokument (optional, PDF, JPEG oder PNG, maximal 5 MB)
+          <input
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+            onChange={(event) => setDocument(event.target.files?.[0] ?? null)}
+          />
+        </label>
+      ) : null}
 
       <div className="button-row">
         <button className="primary-button" type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Antrag wird gesendet ..." : "Hundesteuer anmelden"}
+          {isSubmitting
+            ? "Antrag wird gespeichert ..."
+            : isEditing
+              ? "Änderungen speichern"
+              : "Hundesteuer anmelden"}
         </button>
       </div>
     </form>

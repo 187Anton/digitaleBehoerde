@@ -3,22 +3,20 @@ import type { CertificateOfConductInput } from "./api";
 
 type Props = {
   isSubmitting: boolean;
-  initialData?: Partial<CertificateOfConductInput>;
+  initialData?: CertificateOfConductInput;
+  isEditing?: boolean;
   onSubmit: (data: CertificateOfConductInput) => Promise<void>;
 };
 
 export function CertificateOfConductForm({
   isSubmitting,
   initialData,
+  isEditing = false,
   onSubmit,
 }: Props): JSX.Element {
   const [form, setForm] = useState<CertificateOfConductInput>({
     purpose: initialData?.purpose ?? "",
     deliveryType: initialData?.deliveryType ?? "PRIVATE",
-    deliveryRecipient: initialData?.deliveryRecipient ?? "",
-    deliveryStreet: initialData?.deliveryStreet ?? "",
-    deliveryPostalCode: initialData?.deliveryPostalCode ?? "",
-    deliveryCity: initialData?.deliveryCity ?? "",
   });
 
   function update<K extends keyof CertificateOfConductInput>(
@@ -107,7 +105,11 @@ export function CertificateOfConductForm({
 
       <div className="button-row">
         <button className="primary-button" type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Antrag wird gesendet ..." : "Führungszeugnis beantragen"}
+          {isSubmitting
+            ? "Antrag wird gespeichert ..."
+            : isEditing
+              ? "Änderungen speichern"
+              : "Führungszeugnis beantragen"}
         </button>
       </div>
     </form>
