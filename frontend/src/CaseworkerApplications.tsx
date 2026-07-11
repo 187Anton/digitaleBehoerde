@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { applicationDocumentUrl, type Application, type ApplicationStatus } from "./api";
 import { ApplicationCommentThread } from "./ApplicationCommentThread";
 import {
@@ -9,6 +10,9 @@ import {
 } from "./api";
 
 type NextStatus = Exclude<ApplicationStatus, "SUBMITTED">;
+type TypeFilter = "ALL" | Application["type"];
+type StatusFilter = "ALL" | ApplicationStatus;
+type SortMode = "OLDEST" | "NEWEST" | "STATUS";
 type Props = {
   applications: Application[];
   isUpdating: boolean;
@@ -33,6 +37,20 @@ const documentTypeLabels: Record<Application["documents"][number]["type"], strin
   IDENTITY_DOCUMENT: "Personalausweis",
   LANDLORD_CONFIRMATION: "Wohnungsgeberbestätigung",
   MOVE_IN_CONFIRMATION: "Einzugsbestätigung",
+};
+
+const typeTabs: Array<{ value: TypeFilter; label: string }> = [
+  { value: "ALL", label: "Alle" },
+  { value: "RESIDENCE_CHANGE", label: "Wohnsitz" },
+  { value: "DOG_TAX", label: "Hundesteuer" },
+  { value: "CERTIFICATE_OF_CONDUCT", label: "Führungszeugnis" },
+];
+
+const statusSortOrder: Record<ApplicationStatus, number> = {
+  SUBMITTED: 0,
+  IN_REVIEW: 1,
+  APPROVED: 2,
+  REJECTED: 3,
 };
 
 const deliveryTypeLabels: Record<NonNullable<Application["certificateOfConduct"]>["deliveryType"], string> = {
@@ -90,16 +108,90 @@ export function CaseworkerApplications({
   onStatusChange,
   onComment,
 }: Props): JSX.Element {
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>("ALL");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
+  const [sortMode, setSortMode] = useState<SortMode>("OLDEST");
+
+  const visibleApplications = useMemo(() => {
+    const filtered = applications.filter(
+      (application) =>
+        (typeFilter === "ALL" || application.type === typeFilter)
+        && (statusFilter === "ALL" || application.status === statusFilter)
+    );
+    return filtered.sort((left, right) => {
+      if (sortMode === "STATUS") {
+        const statusDifference = statusSortOrder[left.status] - statusSortOrder[right.status];
+        if (statusDifference !== 0) {
+          return statusDifference;
+        }
+      }
+      const dateDifference =
+        new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime();
+      return sortMode === "NEWEST" ? -dateDifference : dateDifference;
+    });
+  }, [applications, sortMode, statusFilter, typeFilter]);
+
   return (
     <section className="section stack">
       <div className="section-header">
         <div>
           <h2>Arbeitskorb</h2>
-          <span>{applications.length} Anträge im Arbeitskorb</span>
+          <span>
+            {visibleApplications.length} von {applications.length} Anträgen angezeigt
+          </span>
         </div>
       </div>
-      {applications.length === 0 ? <p className="muted">Keine Anträge vorhanden.</p> : null}
-      {applications.map((application) => {
+      <div className="filter-tabs" role="tablist" aria-label="Antragstyp auswählen">
+        {typeTabs.map((tab) => {
+          const count = tab.value === "ALL"
+            ? applications.length
+            : applications.filter((application) => application.type === tab.value).length;
+          return (
+            <button
+              className={typeFilter === tab.value ? "active" : ""}
+              type="button"
+              role="tab"
+              aria-selected={typeFilter === tab.value}
+              key={tab.value}
+              onClick={() => setTypeFilter(tab.value)}
+            >
+              {tab.label} ({count})
+            </button>
+          );
+        })}
+      </div>
+      <div className="filter-toolbar">
+        <label className="field">
+          Status
+          <select
+            aria-label="Antragsstatus filtern"
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
+          >
+            <option value="ALL">Alle Status</option>
+            <option value="SUBMITTED">Eingereicht</option>
+            <option value="IN_REVIEW">In Bearbeitung</option>
+            <option value="APPROVED">Genehmigt</option>
+            <option value="REJECTED">Abgelehnt</option>
+          </select>
+        </label>
+        <label className="field">
+          Sortierung
+          <select
+            aria-label="Anträge sortieren"
+            value={sortMode}
+            onChange={(event) => setSortMode(event.target.value as SortMode)}
+          >
+            <option value="OLDEST">Älteste zuerst</option>
+            <option value="NEWEST">Neueste zuerst</option>
+            <option value="STATUS">Nach Status</option>
+          </select>
+        </label>
+      </div>
+      {visibleApplications.length === 0 ? (
+        <p className="muted">Keine Anträge für die gewählten Filter vorhanden.</p>
+      ) : null}
+      {visibleApplications.map((application) => {
         const residence = application.residenceChange;
         const dogTax = application.dogTax;
         const certificate = application.certificateOfConduct;

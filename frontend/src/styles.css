@@ -766,6 +766,42 @@ a {
   gap: 14px;
 }
 
+.filter-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-tabs button {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.filter-tabs button:hover,
+.filter-tabs button.active {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+}
+
+.filter-tabs button.active {
+  font-weight: 700;
+}
+
+.filter-toolbar {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 320px));
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
 .caseworker-card h3,
 .caseworker-card h4,
 .caseworker-card p {
@@ -888,6 +924,10 @@ a {
   .three-column,
   .status-grid,
   .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-toolbar {
     grid-template-columns: 1fr;
   }
 
