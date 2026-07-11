@@ -1,0 +1,9 @@
+CREATE TYPE "DocumentType" AS ENUM (
+    'OTHER',
+    'IDENTITY_DOCUMENT',
+    'LANDLORD_CONFIRMATION',
+    'MOVE_IN_CONFIRMATION'
+);
+
+ALTER TABLE "documents"
+ADD COLUMN "type" "DocumentType" NOT NULL DEFAULT 'OTHER';
