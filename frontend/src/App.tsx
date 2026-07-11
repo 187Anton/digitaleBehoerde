@@ -75,6 +75,8 @@ function App(): JSX.Element {
   const [user, setUser] = useState<AuthResponse["user"] | null>(null);
   const [email, setEmail] = useState("buerger@example.com");
   const [password, setPassword] = useState("");
+  const [password, setPassword] = useState("password123");
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [message, setMessage] = useState("");
@@ -110,6 +112,14 @@ function App(): JSX.Element {
   }, [user]);
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (mode === "register" && password.length < 8) {
+      setMessage("Das Passwort muss mindestens 8 Zeichen lang sein.");
+      return;
+    }
+    if (mode === "register" && password !== passwordConfirmation) {
+      setMessage("Die Passwörter stimmen nicht überein.");
+      return;
+    }
     setIsLoading(true);
     setMessage("");
     try {
@@ -285,6 +295,12 @@ function App(): JSX.Element {
   }
 
   if (!user) {
+    const passwordTooShort = mode === "register" && password.length > 0 && password.length < 8;
+    const passwordsDiffer =
+      mode === "register"
+      && passwordConfirmation.length > 0
+      && password !== passwordConfirmation;
+
     return (
       <main className="auth-shell">
         <section className="auth-card">
@@ -318,9 +334,42 @@ function App(): JSX.Element {
                 autoComplete={mode === "login" ? "off" : "new-password"}
                 required
               />
+              <span className="password-input">
+                <input
+                  type={isPasswordVisible ? "text" : "password"}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
+                />
+                <button
+                  className="password-toggle"
+                  type="button"
+                  aria-pressed={isPasswordVisible}
+                  onClick={() => setIsPasswordVisible((current) => !current)}
+                >
+                  {isPasswordVisible ? "Verbergen" : "Anzeigen"}
+                </button>
+              </span>
             </label>
             {mode === "register" ? (
               <>
+                <label className="field">
+                  Passwort wiederholen
+                  <input
+                    type="password"
+                    value={passwordConfirmation}
+                    onChange={(event) => setPasswordConfirmation(event.target.value)}
+                    minLength={8}
+                    aria-invalid={passwordsDiffer}
+                    aria-describedby={passwordsDiffer ? "password-confirmation-error" : undefined}
+                    required
+                  />
+                  {passwordsDiffer ? (
+                    <span id="password-confirmation-error" className="field-error" role="alert">
+                      Die Passwörter stimmen nicht überein.
+                    </span>
+                  ) : null}
+                </label>
                 <label className="field">
                   Vorname
                   <input value={firstName} onChange={(event) => setFirstName(event.target.value)} />
