@@ -50,6 +50,11 @@ export type ResidenceChangeInput = {
   newCity: string;
   householdSize: number;
 };
+export type ResidenceChangeDocuments = {
+  identityDocument: File;
+  landlordConfirmation: File;
+  moveInConfirmation?: File;
+};
 export type DogTaxInput = {
   dogName: string;
   dogBreed?: string;
@@ -70,6 +75,7 @@ export type ApplicationDocument = {
   applicationId: string;
   originalName: string;
   mimeType: string;
+  type: "OTHER" | "IDENTITY_DOCUMENT" | "LANDLORD_CONFIRMATION" | "MOVE_IN_CONFIRMATION";
   size: number;
   uploadedAt: string;
 };
@@ -135,11 +141,26 @@ export function fetchApplications(): Promise<{ applications: Application[] }> {
   return request<{ applications: Application[] }>("/api/applications");
 }
 export function createResidenceChange(
-  payload: ResidenceChangeInput
+  payload: ResidenceChangeInput,
+  documents: ResidenceChangeDocuments
 ): Promise<{ application: Application }> {
-  return request<{ application: Application }>("/api/applications/residence-change", {
+  const formData = new FormData();
+  formData.append("data", JSON.stringify(payload));
+  formData.append("identityDocument", documents.identityDocument);
+  formData.append("landlordConfirmation", documents.landlordConfirmation);
+  if (documents.moveInConfirmation) {
+    formData.append("moveInConfirmation", documents.moveInConfirmation);
+  }
+  return fetch(`${API_BASE_URL}/api/applications/residence-change`, {
     method: "POST",
-    body: JSON.stringify(payload),
+    credentials: "include",
+    body: formData,
+  }).then(async (response) => {
+    if (!response.ok) {
+      const body = (await response.json().catch(() => null)) as { error?: string } | null;
+      throw new Error(body?.error ?? "Wohnsitzummeldung konnte nicht eingereicht werden.");
+    }
+    return response.json() as Promise<{ application: Application }>;
   });
 }
 export function createDogTax(

@@ -31,6 +31,24 @@ async function createUser(role: "CITIZEN" | "CASEWORKER" = "CITIZEN") {
   return { user, cookie: `${AUTH_COOKIE}=${token}` };
 }
 
+function submitResidenceChange(
+  cookie?: string,
+  payload: typeof validPayload = validPayload
+) {
+  const residenceRequest = request(app)
+    .post("/api/applications/residence-change")
+    .field("data", JSON.stringify(payload))
+    .attach("identityDocument", Buffer.from("%PDF-1.4 ausweis"), {
+      filename: "personalausweis.pdf",
+      contentType: "application/pdf",
+    })
+    .attach("landlordConfirmation", Buffer.from("%PDF-1.4 wohnungsgeber"), {
+      filename: "wohnungsgeber.pdf",
+      contentType: "application/pdf",
+    });
+  return cookie ? residenceRequest.set("Cookie", cookie) : residenceRequest;
+}
+
 describe("Antrags-Endpunkte (Integration)", () => {
   beforeEach(async () => {
     metricsRegistry.resetMetrics();
@@ -45,10 +63,7 @@ describe("Antrags-Endpunkte (Integration)", () => {
 
   it("legt eine Wohnsitzummeldung mit Status SUBMITTED an", async () => {
     const { user, cookie } = await createUser();
-    const res = await request(app)
-      .post("/api/applications/residence-change")
-      .set("Cookie", cookie)
-      .send(validPayload);
+    const res = await submitResidenceChange(cookie);
 
     expect(res.status).toBe(201);
     expect(res.body.application).toMatchObject({
@@ -59,6 +74,10 @@ describe("Antrags-Endpunkte (Integration)", () => {
         newPostalCode: "10115",
         householdSize: 2,
       },
+      documents: [
+        { type: "IDENTITY_DOCUMENT", originalName: "personalausweis.pdf" },
+        { type: "LANDLORD_CONFIRMATION", originalName: "wohnungsgeber.pdf" },
+      ],
     });
     expect(await prisma.application.count()).toBe(1);
     expect(await metricsRegistry.metrics()).toContain(
@@ -129,40 +148,71 @@ describe("Antrags-Endpunkte (Integration)", () => {
 
   it("lehnt unvollstaendige Meldedaten ab", async () => {
     const { cookie } = await createUser();
-    const res = await request(app)
-      .post("/api/applications/residence-change")
-      .set("Cookie", cookie)
-      .send({ ...validPayload, newCity: "" });
+    const res = await submitResidenceChange(cookie, { ...validPayload, newCity: "" });
 
     expect(res.status).toBe(400);
     expect(await prisma.application.count()).toBe(0);
   });
 
   it("verlangt eine Anmeldung", async () => {
-    const res = await request(app).post("/api/applications/residence-change").send(validPayload);
+    const res = await submitResidenceChange();
     expect(res.status).toBe(401);
   });
 
   it("erlaubt Sachbearbeitern keine Antragstellung", async () => {
     const { cookie } = await createUser("CASEWORKER");
+    const res = await submitResidenceChange(cookie);
+    expect(res.status).toBe(403);
+  });
+
+  it("verlangt beide Pflichtdokumente", async () => {
+    const { cookie } = await createUser();
     const res = await request(app)
       .post("/api/applications/residence-change")
       .set("Cookie", cookie)
-      .send(validPayload);
-    expect(res.status).toBe(403);
+      .field("data", JSON.stringify(validPayload))
+      .attach("identityDocument", Buffer.from("%PDF-1.4 ausweis"), {
+        filename: "personalausweis.pdf",
+        contentType: "application/pdf",
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain("Wohnungsgeberbestätigung");
+    expect(await prisma.application.count()).toBe(0);
+  });
+
+  it("akzeptiert eine optionale Einzugsbestätigung", async () => {
+    const { cookie } = await createUser();
+    const res = await request(app)
+      .post("/api/applications/residence-change")
+      .set("Cookie", cookie)
+      .field("data", JSON.stringify(validPayload))
+      .attach("identityDocument", Buffer.from("%PDF-1.4 ausweis"), {
+        filename: "personalausweis.pdf",
+        contentType: "application/pdf",
+      })
+      .attach("landlordConfirmation", Buffer.from("%PDF-1.4 wohnungsgeber"), {
+        filename: "wohnungsgeber.pdf",
+        contentType: "application/pdf",
+      })
+      .attach("moveInConfirmation", Buffer.from("%PDF-1.4 einzug"), {
+        filename: "einzug.pdf",
+        contentType: "application/pdf",
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.application.documents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: "MOVE_IN_CONFIRMATION", originalName: "einzug.pdf" }),
+      ])
+    );
   });
 
   it("liefert nur die Antraege des angemeldeten Buergers", async () => {
     const first = await createUser();
     const second = await createUser();
-    await request(app)
-      .post("/api/applications/residence-change")
-      .set("Cookie", first.cookie)
-      .send(validPayload);
-    await request(app)
-      .post("/api/applications/residence-change")
-      .set("Cookie", second.cookie)
-      .send({ ...validPayload, newCity: "Hamburg" });
+    await submitResidenceChange(first.cookie);
+    await submitResidenceChange(second.cookie, { ...validPayload, newCity: "Hamburg" });
 
     const res = await request(app).get("/api/applications").set("Cookie", first.cookie);
     expect(res.status).toBe(200);
@@ -173,10 +223,7 @@ describe("Antrags-Endpunkte (Integration)", () => {
 
   it("laedt ein PDF zu einem eigenen Antrag hoch und wieder herunter", async () => {
     const { cookie } = await createUser();
-    const created = await request(app)
-      .post("/api/applications/residence-change")
-      .set("Cookie", cookie)
-      .send(validPayload);
+    const created = await submitResidenceChange(cookie);
 
     const upload = await request(app)
       .post(`/api/applications/${created.body.application.id}/documents`)
@@ -190,6 +237,7 @@ describe("Antrags-Endpunkte (Integration)", () => {
     expect(upload.body.document).toMatchObject({
       originalName: "meldebestaetigung.pdf",
       mimeType: "application/pdf",
+      type: "OTHER",
       size: 13,
     });
 
@@ -253,10 +301,7 @@ describe("Antrags-Endpunkte (Integration)", () => {
 
   it("lehnt nicht erlaubte Dateitypen ab", async () => {
     const { cookie } = await createUser();
-    const created = await request(app)
-      .post("/api/applications/residence-change")
-      .set("Cookie", cookie)
-      .send(validPayload);
+    const created = await submitResidenceChange(cookie);
 
     const upload = await request(app)
       .post(`/api/applications/${created.body.application.id}/documents`)
@@ -267,15 +312,12 @@ describe("Antrags-Endpunkte (Integration)", () => {
       });
 
     expect(upload.status).toBe(400);
-    expect(await prisma.document.count()).toBe(0);
+    expect(await prisma.document.count()).toBe(2);
   });
 
   it("lehnt manipulierte Dateiinhalte ab", async () => {
     const { cookie } = await createUser();
-    const created = await request(app)
-      .post("/api/applications/residence-change")
-      .set("Cookie", cookie)
-      .send(validPayload);
+    const created = await submitResidenceChange(cookie);
 
     const upload = await request(app)
       .post(`/api/applications/${created.body.application.id}/documents`)
@@ -286,15 +328,12 @@ describe("Antrags-Endpunkte (Integration)", () => {
       });
 
     expect(upload.status).toBe(400);
-    expect(await prisma.document.count()).toBe(0);
+    expect(await prisma.document.count()).toBe(2);
   });
 
   it("lehnt Dokumente über 5 MB ab", async () => {
     const { cookie } = await createUser();
-    const created = await request(app)
-      .post("/api/applications/residence-change")
-      .set("Cookie", cookie)
-      .send(validPayload);
+    const created = await submitResidenceChange(cookie);
 
     const upload = await request(app)
       .post(`/api/applications/${created.body.application.id}/documents`)
@@ -305,6 +344,7 @@ describe("Antrags-Endpunkte (Integration)", () => {
       });
 
     expect(upload.status).toBe(400);
+    expect(await prisma.document.count()).toBe(2);
     expect(upload.body.error).toBe("Dokument darf maximal 5 MB groß sein.");
     expect(await prisma.document.count()).toBe(0);
   });
@@ -312,10 +352,7 @@ describe("Antrags-Endpunkte (Integration)", () => {
   it("verhindert Uploads zu fremden Antraegen", async () => {
     const owner = await createUser();
     const stranger = await createUser();
-    const created = await request(app)
-      .post("/api/applications/residence-change")
-      .set("Cookie", owner.cookie)
-      .send(validPayload);
+    const created = await submitResidenceChange(owner.cookie);
 
     const upload = await request(app)
       .post(`/api/applications/${created.body.application.id}/documents`)
@@ -326,6 +363,6 @@ describe("Antrags-Endpunkte (Integration)", () => {
       });
 
     expect(upload.status).toBe(404);
-    expect(await prisma.document.count()).toBe(0);
+    expect(await prisma.document.count()).toBe(2);
   });
 });

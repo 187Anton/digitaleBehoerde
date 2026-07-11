@@ -25,6 +25,12 @@ const applicationTypeLabels: Record<Application["type"], string> = {
   DOG_TAX: "Hundesteuer anmelden",
   CERTIFICATE_OF_CONDUCT: "Führungszeugnis beantragen",
 };
+const documentTypeLabels: Record<Application["documents"][number]["type"], string> = {
+  OTHER: "Weiteres Dokument",
+  IDENTITY_DOCUMENT: "Personalausweis",
+  LANDLORD_CONFIRMATION: "Wohnungsgeberbestätigung",
+  MOVE_IN_CONFIRMATION: "Einzugsbestätigung",
+};
 
 const deliveryTypeLabels: Record<NonNullable<Application["certificateOfConduct"]>["deliveryType"], string> = {
   PRIVATE: "Private Anschrift",
@@ -153,6 +159,18 @@ export function CaseworkerApplications({
             {application.documents.length > 0 ? (
               <ul className="document-table">
                 {application.documents.map((document) => (
+                  <li className="document-row" key={document.id}>
+                    <div className="doc-icon">{documentBadgeLabel(document.originalName)}</div>
+                    <div>
+                      <a
+                        href={applicationDocumentUrl(application.id, document.id)}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {document.originalName}
+                      </a>
+                      <span>{documentTypeLabels[document.type]}</span>
+                    </div>
                   <li className="document-preview-card" key={document.id}>
                     <div className="document-preview-header">
                       <div className="doc-icon">{documentBadgeLabel(document.originalName)}</div>

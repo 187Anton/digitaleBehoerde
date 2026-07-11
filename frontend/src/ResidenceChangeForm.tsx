@@ -1,8 +1,9 @@
 import { FormEvent, useState } from "react";
-import type { ResidenceChangeInput } from "./api";
+import type { ResidenceChangeDocuments, ResidenceChangeInput } from "./api";
 
 type Props = {
   isSubmitting: boolean;
+  onSubmit: (data: ResidenceChangeInput, documents: ResidenceChangeDocuments) => Promise<void>;
   initialData?: ResidenceChangeInput;
   isEditing?: boolean;
   onSubmit: (data: ResidenceChangeInput, document: File | null) => Promise<void>;
@@ -24,7 +25,9 @@ export function ResidenceChangeForm({
     newCity: initialData?.newCity ?? "",
     householdSize: initialData?.householdSize ?? 1,
   });
-  const [document, setDocument] = useState<File | null>(null);
+  const [identityDocument, setIdentityDocument] = useState<File | null>(null);
+  const [landlordConfirmation, setLandlordConfirmation] = useState<File | null>(null);
+  const [moveInConfirmation, setMoveInConfirmation] = useState<File | null>(null);
 
   function update<K extends keyof ResidenceChangeInput>(key: K, value: ResidenceChangeInput[K]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -32,6 +35,13 @@ export function ResidenceChangeForm({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (identityDocument && landlordConfirmation) {
+      await onSubmit(form, {
+        identityDocument,
+        landlordConfirmation,
+        ...(moveInConfirmation ? { moveInConfirmation } : {}),
+      });
+    }
     await onSubmit(form, document);
   }
 
@@ -129,6 +139,15 @@ export function ResidenceChangeForm({
         />
       </label>
 
+      <label className="field upload-box">
+        Personalausweis (Pflicht, PDF, JPEG oder PNG, maximal 5 MB)
+        <input
+          type="file"
+          accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+          onChange={(event) => setIdentityDocument(event.target.files?.[0] ?? null)}
+          required
+        />
+      </label>
       {!isEditing ? (
         <label className="field upload-box">
           Nachweisdokument (PDF, JPEG oder PNG, maximal 5 MB)
@@ -140,6 +159,25 @@ export function ResidenceChangeForm({
           />
         </label>
       ) : null}
+
+      <label className="field upload-box">
+        Wohnungsgeberbestätigung (Pflicht, PDF, JPEG oder PNG, maximal 5 MB)
+        <input
+          type="file"
+          accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+          onChange={(event) => setLandlordConfirmation(event.target.files?.[0] ?? null)}
+          required
+        />
+      </label>
+
+      <label className="field upload-box">
+        Einzugsbestätigung (optional, PDF, JPEG oder PNG, maximal 5 MB)
+        <input
+          type="file"
+          accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+          onChange={(event) => setMoveInConfirmation(event.target.files?.[0] ?? null)}
+        />
+      </label>
 
       <div className="button-row">
         <button className="primary-button" type="submit" disabled={isSubmitting}>

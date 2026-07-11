@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { unlink } from "node:fs/promises";
+import { DocumentType } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import {
   deleteStoredDocument,
@@ -11,6 +12,7 @@ import {
   documentUpload,
   hasValidDocumentSignature,
   publicDocumentSelect,
+  residenceDocumentUpload,
 } from "../lib/upload.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import {
@@ -41,37 +43,106 @@ applicationsRouter.get("/", async (req, res) => {
   return res.json({ applications });
 });
 
-applicationsRouter.post("/residence-change", async (req, res) => {
-  if (req.user!.role !== "CITIZEN") {
-    return res.status(403).json({ error: "Nur Bürger können Anträge stellen" });
-  }
+applicationsRouter.post(
+  "/residence-change",
+  (req, res, next) => {
+    if (req.user!.role !== "CITIZEN") {
+      return res.status(403).json({ error: "Nur Bürger können Anträge stellen" });
+    }
+    return next();
+  },
+  residenceDocumentUpload.fields([
+    { name: "identityDocument", maxCount: 1 },
+    { name: "landlordConfirmation", maxCount: 1 },
+    { name: "moveInConfirmation", maxCount: 1 },
+  ]),
+  async (req, res, next) => {
+    const files = req.files as Record<string, Express.Multer.File[]> | undefined;
+    const identityDocument = files?.identityDocument?.[0];
+    const landlordConfirmation = files?.landlordConfirmation?.[0];
+    const moveInConfirmation = files?.moveInConfirmation?.[0];
+    const uploadedFiles = [identityDocument, landlordConfirmation, moveInConfirmation].filter(
+      (file): file is Express.Multer.File => Boolean(file)
+    );
+    const cleanupTemporaryFiles = () =>
+      Promise.all(uploadedFiles.map((file) => unlink(file.path).catch(() => undefined)));
 
-  const parsed = residenceChangeSchema.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).json({
-      error: "Validierung fehlgeschlagen",
-      details: parsed.error.flatten(),
-    });
-  }
+    if (!identityDocument || !landlordConfirmation) {
+      await cleanupTemporaryFiles();
+      return res.status(400).json({
+        error: "Personalausweis und Wohnungsgeberbestätigung sind erforderlich",
+      });
+    }
 
-  const { moveDate, ...data } = parsed.data;
-  const application = await prisma.application.create({
-    data: {
-      type: "RESIDENCE_CHANGE",
-      userId: req.user!.userId,
-      residenceChange: {
-        create: {
-          ...data,
-          moveDate: new Date(`${moveDate}T00:00:00.000Z`),
+    let body: unknown;
+    try {
+      body = JSON.parse(String(req.body.data ?? ""));
+    } catch {
+      await cleanupTemporaryFiles();
+      return res.status(400).json({ error: "Antragsdaten sind ungültig" });
+    }
+    const parsed = residenceChangeSchema.safeParse(body);
+    if (!parsed.success) {
+      await cleanupTemporaryFiles();
+      return res.status(400).json({
+        error: "Validierung fehlgeschlagen",
+        details: parsed.error.flatten(),
+      });
+    }
+
+    const signatures = await Promise.all(
+      uploadedFiles.map((file) => hasValidDocumentSignature(file.path, file.mimetype))
+    );
+    if (signatures.some((valid) => !valid)) {
+      await cleanupTemporaryFiles();
+      return res.status(400).json({ error: "Dateiinhalt entspricht nicht dem Dateityp" });
+    }
+
+    const typedFiles: Array<{ file: Express.Multer.File; type: DocumentType }> = [
+      { file: identityDocument, type: DocumentType.IDENTITY_DOCUMENT },
+      { file: landlordConfirmation, type: DocumentType.LANDLORD_CONFIRMATION },
+    ];
+    if (moveInConfirmation) {
+      typedFiles.push({ file: moveInConfirmation, type: DocumentType.MOVE_IN_CONFIRMATION });
+    }
+
+    try {
+      for (const { file } of typedFiles) {
+        await persistUploadedDocument(file);
+      }
+      const { moveDate, ...data } = parsed.data;
+      const application = await prisma.application.create({
+        data: {
+          type: "RESIDENCE_CHANGE",
+          userId: req.user!.userId,
+          residenceChange: {
+            create: {
+              ...data,
+              moveDate: new Date(`${moveDate}T00:00:00.000Z`),
+            },
+          },
+          documents: {
+            create: typedFiles.map(({ file, type }) => ({
+              originalName: file.originalname,
+              storedName: file.filename,
+              mimeType: file.mimetype,
+              size: file.size,
+              type,
+            })),
+          },
         },
-      },
-    },
-    include: { residenceChange: true, documents: { select: publicDocumentSelect } },
-  });
-  applicationsCreated.inc({ type: application.type });
-
-  return res.status(201).json({ application });
-});
+        include: { residenceChange: true, documents: { select: publicDocumentSelect } },
+      });
+      applicationsCreated.inc({ type: application.type });
+      return res.status(201).json({ application });
+    } catch (error) {
+      await Promise.all(
+        typedFiles.map(({ file }) => deleteStoredDocument(file.filename).catch(() => undefined))
+      );
+      return next(error);
+    }
+  }
+);
 
 applicationsRouter.post("/dog-tax", async (req, res) => {
   if (req.user!.role !== "CITIZEN") {
