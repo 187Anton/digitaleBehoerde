@@ -32,11 +32,31 @@ export const documentUpload = multer({
   },
 });
 
+export const residenceDocumentUpload = multer({
+  storage: multer.diskStorage({
+    destination: env.uploadDir,
+    filename: (_req, file, callback) => {
+      callback(null, `${randomUUID()}${extensionsByMimeType[file.mimetype]}`);
+    },
+  }),
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+    files: 3,
+  },
+  fileFilter: (_req, file, callback) => {
+    if (!extensionsByMimeType[file.mimetype]) {
+      return callback(new multer.MulterError("LIMIT_UNEXPECTED_FILE", file.fieldname));
+    }
+    return callback(null, true);
+  },
+});
+
 export const publicDocumentSelect = {
   id: true,
   applicationId: true,
   originalName: true,
   mimeType: true,
+  type: true,
   size: true,
   uploadedAt: true,
 } satisfies Prisma.DocumentSelect;

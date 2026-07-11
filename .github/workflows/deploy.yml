@@ -248,6 +248,27 @@ jobs:
               "AZURE_STORAGE_ACCOUNT=$DOCUMENT_STORAGE_ACCOUNT" \
               "AZURE_STORAGE_CONTAINER=application-documents"
 
+      - name: Smoke test deployed backend
+        run: |
+          BACKEND_FQDN=$(az containerapp show \
+            --name ${{ secrets.AZURE_BACKEND_APP }} \
+            --resource-group ${{ secrets.AZURE_RG }} \
+            --query "properties.configuration.ingress.fqdn" \
+            --output tsv)
+
+          test -n "$BACKEND_FQDN"
+
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --retry 12 \
+            --retry-delay 5 \
+            --retry-all-errors \
+            --max-time 10 \
+            "https://$BACKEND_FQDN/api/health" \
+            | grep --quiet '"status":"ok"'
+
       - name: Deploy frontend to Azure Container App
         run: |
           BACKEND_FQDN=$(az containerapp show \

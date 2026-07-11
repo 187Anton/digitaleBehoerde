@@ -93,4 +93,23 @@ describe("POST /api/applications/dog-tax (Integration)", () => {
     expect(listA.body.applications[0].dogTax.dogName).toBe("Bello");
     expect(listB.body.applications).toHaveLength(0);
   });
+
+  it("aktualisiert einen eigenen eingereichten Hundesteuer-Antrag", async () => {
+    const { cookie } = await createUser();
+    const created = await request(app)
+      .post("/api/applications/dog-tax")
+      .set("Cookie", cookie)
+      .send(validPayload);
+
+    const updated = await request(app)
+      .patch(`/api/applications/${created.body.application.id}`)
+      .set("Cookie", cookie)
+      .send({ ...validPayload, dogName: "Luna", ownerCity: "Berlin" });
+
+    expect(updated.status).toBe(200);
+    expect(updated.body.application.dogTax).toMatchObject({
+      dogName: "Luna",
+      ownerCity: "Berlin",
+    });
+  });
 });

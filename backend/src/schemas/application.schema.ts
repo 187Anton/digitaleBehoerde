@@ -17,7 +17,7 @@ export const residenceChangeSchema = z.object({
     .refine((value) => {
       const date = new Date(`${value}T00:00:00.000Z`);
       return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value);
-    }, "Einzugsdatum ist ungueltig"),
+    }, "Einzugsdatum ist ungültig"),
   oldStreet: requiredText,
   oldPostalCode: postalCode,
   oldCity: requiredText,
@@ -49,6 +49,10 @@ export type DogTaxInput = z.infer<typeof dogTaxSchema>;
 export const certificateOfConductSchema = z.object({
   purpose: requiredText,
   deliveryType: z.enum(["PRIVATE", "AUTHORITY"]),
+  deliveryRecipient: requiredText,
+  deliveryStreet: requiredText,
+  deliveryPostalCode: postalCode,
+  deliveryCity: requiredText,
 });
 
 export type CertificateOfConductInput = z.infer<typeof certificateOfConductSchema>;
@@ -57,6 +61,6 @@ export const applicationStatusSchema = z.object({
   status: z.enum(["IN_REVIEW", "APPROVED", "REJECTED"]),
 });
 
-export const chatMessageSchema = z.object({
-  body: z.string().trim().min(1, "Nachricht darf nicht leer sein").max(2000),
+export const applicationCommentSchema = z.object({
+  body: z.string().trim().min(1, "Kommentar darf nicht leer sein").max(2000),
 });

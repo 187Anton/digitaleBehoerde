@@ -2,7 +2,10 @@ import { ApplicationStatus, type Prisma } from "@prisma/client";
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth, requireRole } from "../middleware/requireAuth.js";
-import { applicationStatusSchema, chatMessageSchema } from "../schemas/application.schema.js";
+import {
+  applicationCommentSchema,
+  applicationStatusSchema,
+} from "../schemas/application.schema.js";
 import { publicDocumentSelect } from "../lib/upload.js";
 import { applicationStatusChanges } from "../lib/metrics.js";
 
@@ -27,6 +30,13 @@ const applicationInclude = {
         where: { readByCaseworkerAt: null },
       },
     },
+  comments: {
+    include: {
+      author: {
+        select: { id: true, role: true, firstName: true, lastName: true },
+      },
+    },
+    orderBy: { createdAt: "asc" },
   },
 } satisfies Prisma.ApplicationInclude;
 
@@ -121,6 +131,34 @@ caseworkerRouter.post("/applications/:id/messages", async (req, res) => {
     include: chatMessageInclude,
   });
   return res.status(201).json({ message });
+});
+
+caseworkerRouter.post("/applications/:id/comments", async (req, res) => {
+  const parsed = applicationCommentSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Kommentar darf nicht leer sein" });
+  }
+  const application = await prisma.application.findUnique({
+    where: { id: req.params.id },
+    select: { id: true },
+  });
+  if (!application) {
+    return res.status(404).json({ error: "Antrag nicht gefunden" });
+  }
+
+  const comment = await prisma.applicationComment.create({
+    data: {
+      applicationId: application.id,
+      authorId: req.user!.userId,
+      body: parsed.data.body,
+    },
+    include: {
+      author: {
+        select: { id: true, role: true, firstName: true, lastName: true },
+      },
+    },
+  });
+  return res.status(201).json({ comment });
 });
 
 caseworkerRouter.patch("/applications/:id/status", async (req, res) => {

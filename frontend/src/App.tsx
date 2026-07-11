@@ -3,14 +3,17 @@ import {
   Application,
   AuthResponse,
   ResidenceChangeInput,
+  ResidenceChangeDocuments,
   DogTaxInput,
   CertificateOfConductInput,
   ProfileUpdateInput,
   Service,
+  addApplicationComment,
   applicationDocumentUrl,
   createResidenceChange,
   createDogTax,
   createCertificateOfConduct,
+  deleteApplicationDocument,
   fetchApplications,
   fetchCaseworkerApplications,
   updateProfile,
@@ -19,6 +22,8 @@ import {
   login,
   logout,
   register,
+  replaceApplicationDocument,
+  updateApplication,
   updateApplicationStatus,
   uploadApplicationDocument,
 } from "./api";
@@ -28,8 +33,10 @@ import { ResidenceChangeForm } from "./ResidenceChangeForm";
 import { DogTaxForm } from "./DogTaxForm";
 import { ProfileForm } from "./ProfileForm";
 import { CertificateOfConductForm } from "./CertificateOfConductForm";
+import { ApplicationCommentThread } from "./ApplicationCommentThread";
+import { CitizenDocuments } from "./CitizenDocuments";
 type Mode = "login" | "register";
-type View = "catalog" | "service-detail" | "applications" | "messages" | "profile";
+type View = "catalog" | "service-detail" | "applications" | "edit-application" | "profile";
 
 const statusLabels: Record<Application["status"], string> = {
   SUBMITTED: "Eingereicht",
@@ -51,6 +58,11 @@ const serviceGlyphs: Record<Service["type"], string> = {
   RESIDENCE_CHANGE: "⌂",
   DOG_TAX: "✦",
   CERTIFICATE_OF_CONDUCT: "▤",
+const documentTypeLabels: Record<Application["documents"][number]["type"], string> = {
+  OTHER: "Weiteres Dokument",
+  IDENTITY_DOCUMENT: "Personalausweis",
+  LANDLORD_CONFIRMATION: "Wohnungsgeberbestätigung",
+  MOVE_IN_CONFIRMATION: "Einzugsbestätigung",
 };
 
 const statusClassNames: Record<Application["status"], string> = {
@@ -65,6 +77,8 @@ const viewTitles: Record<View, string> = {
   "service-detail": "Antrag stellen",
   applications: "Meine Anträge",
   messages: "Nachrichten",
+  documents: "Meine Dokumente",
+  "edit-application": "Antrag bearbeiten",
   profile: "Mein Profil",
 };
 
@@ -81,7 +95,9 @@ function App(): JSX.Element {
   const [mode, setMode] = useState<Mode>("login");
   const [user, setUser] = useState<AuthResponse["user"] | null>(null);
   const [email, setEmail] = useState("buerger@example.com");
+  const [password, setPassword] = useState("");
   const [password, setPassword] = useState("password123");
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [message, setMessage] = useState("");
@@ -91,6 +107,7 @@ function App(): JSX.Element {
   const [activeService, setActiveService] = useState<Service | null>(null);
   const [applications, setApplications] = useState<Application[]>([]);
   const [chatApplication, setChatApplication] = useState<Application | null>(null);
+  const [editingApplication, setEditingApplication] = useState<Application | null>(null);
   useEffect(() => {
     fetchCurrentUser()
       .then((response) => setUser(response.user))
@@ -138,6 +155,14 @@ function App(): JSX.Element {
   }, [user]);
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (mode === "register" && password.length < 8) {
+      setMessage("Das Passwort muss mindestens 8 Zeichen lang sein.");
+      return;
+    }
+    if (mode === "register" && password !== passwordConfirmation) {
+      setMessage("Die Passwörter stimmen nicht überein.");
+      return;
+    }
     setIsLoading(true);
     setMessage("");
     try {
@@ -148,6 +173,9 @@ function App(): JSX.Element {
       setUser(response.user);
       setMessage(mode === "login" ? "Erfolgreich angemeldet." : "Registrierung erfolgreich.");
     } catch (error) {
+      if (mode === "login") {
+        setPassword("");
+      }
       setMessage(error instanceof Error ? error.message : "Anmeldung fehlgeschlagen.");
     } finally {
       setIsLoading(false);
@@ -161,6 +189,7 @@ function App(): JSX.Element {
       setUser(null);
       setView("catalog");
       setActiveService(null);
+      setEditingApplication(null);
       setApplications([]);
       setChatApplication(null);
       setMessage("Erfolgreich abgemeldet.");
@@ -179,6 +208,7 @@ function App(): JSX.Element {
   }
   function backToCatalog() {
     setActiveService(null);
+    setEditingApplication(null);
     setView("catalog");
   }
   function openChat(application: Application) {
@@ -195,24 +225,19 @@ function App(): JSX.Element {
     );
   }, []);
   async function handleResidenceChange(data: ResidenceChangeInput, document: File) {
+  async function handleResidenceChange(
+    data: ResidenceChangeInput,
+    documents: ResidenceChangeDocuments
+  ) {
+  async function handleResidenceChange(data: ResidenceChangeInput, document: File | null) {
+    if (!document) {
+      setMessage("Bitte wählen Sie ein Nachweisdokument aus.");
+      return;
+    }
     setIsLoading(true);
     setMessage("");
     try {
-      const response = await createResidenceChange(data);
-      try {
-        const uploadResponse = await uploadApplicationDocument(response.application.id, document);
-        response.application.documents = [uploadResponse.document];
-      } catch (error) {
-        setApplications((current) => [response.application, ...current]);
-        setView("applications");
-        setActiveService(null);
-        setMessage(
-          `Antrag wurde angelegt, aber das Dokument fehlt: ${
-            error instanceof Error ? error.message : "Upload fehlgeschlagen."
-          }`
-        );
-        return;
-      }
+      const response = await createResidenceChange(data, documents);
       setApplications((current) => [response.application, ...current]);
       setView("applications");
       setActiveService(null);
@@ -288,6 +313,88 @@ function App(): JSX.Element {
       setIsLoading(false);
     }
   }
+  async function handleApplicationUpdate(
+    data: ResidenceChangeInput | DogTaxInput | CertificateOfConductInput
+  ) {
+    if (!editingApplication) {
+      return;
+    }
+    setIsLoading(true);
+    setMessage("");
+    try {
+      const response = await updateApplication(editingApplication.id, data);
+      setApplications((current) =>
+        current.map((application) =>
+          application.id === response.application.id ? response.application : application
+        )
+      );
+      setEditingApplication(null);
+      setView("applications");
+      setMessage("Antrag wurde aktualisiert.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Antrag konnte nicht aktualisiert werden.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+  async function handleDocumentReplace(
+    applicationId: string,
+    documentId: string,
+    file: File
+  ) {
+    setIsLoading(true);
+    setMessage("");
+    try {
+      const response = await replaceApplicationDocument(applicationId, documentId, file);
+      setApplications((current) =>
+        current.map((application) =>
+          application.id === applicationId
+            ? {
+                ...application,
+                documents: application.documents.map((document) =>
+                  document.id === documentId ? response.document : document
+                ),
+              }
+            : application
+        )
+      );
+      setMessage("Dokument wurde ersetzt.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Dokument konnte nicht ersetzt werden.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+  async function handleDocumentDelete(applicationId: string, documentId: string) {
+    setIsLoading(true);
+    setMessage("");
+    try {
+      await deleteApplicationDocument(applicationId, documentId);
+      setApplications((current) =>
+        current.map((application) =>
+          application.id === applicationId
+            ? {
+                ...application,
+                documents: application.documents.filter((document) => document.id !== documentId),
+              }
+            : application
+        )
+      );
+      setMessage("Dokument wurde gelöscht.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Dokument konnte nicht gelöscht werden.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+  function openApplicationEditor(application: Application) {
+    if (application.status !== "SUBMITTED") {
+      return;
+    }
+    setEditingApplication(application);
+    setView("edit-application");
+    setMessage("");
+  }
   async function handleProfileUpdate(data: ProfileUpdateInput) {
     setIsLoading(true);
     setMessage("");
@@ -322,8 +429,38 @@ function App(): JSX.Element {
       setIsLoading(false);
     }
   }
+  async function handleApplicationComment(applicationId: string, body: string): Promise<boolean> {
+    setIsLoading(true);
+    setMessage("");
+    try {
+      const response = await addApplicationComment(applicationId, body);
+      setApplications((current) =>
+        current.map((application) =>
+          application.id === applicationId
+            ? {
+                ...application,
+                comments: [...(application.comments ?? []), response.comment],
+              }
+            : application
+        )
+      );
+      setMessage("Kommentar wurde hinzugefügt.");
+      return true;
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Kommentar konnte nicht gespeichert werden.");
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   if (!user) {
+    const passwordTooShort = mode === "register" && password.length > 0 && password.length < 8;
+    const passwordsDiffer =
+      mode === "register"
+      && passwordConfirmation.length > 0
+      && password !== passwordConfirmation;
+
     return (
       <main className="auth-shell">
         <section className="auth-card">
@@ -338,7 +475,7 @@ function App(): JSX.Element {
             <h2>{mode === "login" ? "Login" : "Registrierung"}</h2>
             <p>Mit Ihrem Konto können Sie Anträge digital einreichen und verfolgen.</p>
           </div>
-          <form onSubmit={handleSubmit}>
+          <form autoComplete="off" onSubmit={handleSubmit}>
             <label className="field">
               E-Mail
               <input
@@ -354,11 +491,45 @@ function App(): JSX.Element {
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
+                autoComplete={mode === "login" ? "off" : "new-password"}
                 required
               />
+              <span className="password-input">
+                <input
+                  type={isPasswordVisible ? "text" : "password"}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
+                />
+                <button
+                  className="password-toggle"
+                  type="button"
+                  aria-pressed={isPasswordVisible}
+                  onClick={() => setIsPasswordVisible((current) => !current)}
+                >
+                  {isPasswordVisible ? "Verbergen" : "Anzeigen"}
+                </button>
+              </span>
             </label>
             {mode === "register" ? (
               <>
+                <label className="field">
+                  Passwort wiederholen
+                  <input
+                    type="password"
+                    value={passwordConfirmation}
+                    onChange={(event) => setPasswordConfirmation(event.target.value)}
+                    minLength={8}
+                    aria-invalid={passwordsDiffer}
+                    aria-describedby={passwordsDiffer ? "password-confirmation-error" : undefined}
+                    required
+                  />
+                  {passwordsDiffer ? (
+                    <span id="password-confirmation-error" className="field-error" role="alert">
+                      Die Passwörter stimmen nicht überein.
+                    </span>
+                  ) : null}
+                </label>
                 <label className="field">
                   Vorname
                   <input value={firstName} onChange={(event) => setFirstName(event.target.value)} />
@@ -391,6 +562,8 @@ function App(): JSX.Element {
   const openApplications = applications.filter((application) => application.status !== "APPROVED").length;
   const unreadChatMessages = applications.reduce(
     (count, application) => count + (application.unreadChatMessages ?? 0),
+  const documentCount = applications.reduce(
+    (count, application) => count + application.documents.length,
     0
   );
 
@@ -432,6 +605,11 @@ function App(): JSX.Element {
             >
               <span className="nav-icon" aria-hidden="true">◌</span>
               Nachrichten ({unreadChatMessages})
+              className={`nav-item ${view === "documents" ? "active" : ""}`}
+              type="button"
+              onClick={() => setView("documents")}
+            >
+              Dokumente ({documentCount})
             </button>
             <button
               className={`nav-item ${view === "profile" ? "active" : ""}`}
@@ -546,7 +724,64 @@ function App(): JSX.Element {
                 <DogTaxForm isSubmitting={isLoading} onSubmit={handleDogTax} />
               ) : null}
               {activeService.type === "CERTIFICATE_OF_CONDUCT" ? (
-                <CertificateOfConductForm isSubmitting={isLoading} onSubmit={handleCertificateOfConduct} />
+                <CertificateOfConductForm
+                  isSubmitting={isLoading}
+                  initialData={{
+                    deliveryRecipient: [user.firstName, user.lastName].filter(Boolean).join(" "),
+                    deliveryStreet: user.street ?? "",
+                    deliveryPostalCode: user.postalCode ?? "",
+                    deliveryCity: user.city ?? "",
+                  }}
+                  onSubmit={handleCertificateOfConduct}
+                />
+              ) : null}
+            </section>
+          ) : null}
+
+          {user.role === "CITIZEN" && view === "edit-application" && editingApplication ? (
+            <section className="section">
+              <div className="detail-head">
+                <div>
+                  <h2>{applicationTypeLabels[editingApplication.type]}</h2>
+                  <p>Änderungen sind möglich, solange der Antrag noch nicht bearbeitet wird.</p>
+                </div>
+                <button
+                  className="ghost-button"
+                  type="button"
+                  onClick={() => {
+                    setEditingApplication(null);
+                    setView("applications");
+                  }}
+                >
+                  Abbrechen
+                </button>
+              </div>
+              {editingApplication.residenceChange ? (
+                <ResidenceChangeForm
+                  key={editingApplication.id}
+                  isSubmitting={isLoading}
+                  initialData={editingApplication.residenceChange}
+                  isEditing
+                  onSubmit={async (data) => handleApplicationUpdate(data)}
+                />
+              ) : null}
+              {editingApplication.dogTax ? (
+                <DogTaxForm
+                  key={editingApplication.id}
+                  isSubmitting={isLoading}
+                  initialData={editingApplication.dogTax}
+                  isEditing
+                  onSubmit={async (data) => handleApplicationUpdate(data)}
+                />
+              ) : null}
+              {editingApplication.certificateOfConduct ? (
+                <CertificateOfConductForm
+                  key={editingApplication.id}
+                  isSubmitting={isLoading}
+                  initialData={editingApplication.certificateOfConduct}
+                  isEditing
+                  onSubmit={handleApplicationUpdate}
+                />
               ) : null}
             </section>
           ) : null}
@@ -580,7 +815,7 @@ function App(): JSX.Element {
                           ? ` · Hund: ${application.dogTax.dogName}, Steuerbeginn ${new Date(application.dogTax.taxStartDate).toLocaleDateString("de-DE")}`
                           : ""}
                         {application.certificateOfConduct
-                          ? ` · Zweck: ${application.certificateOfConduct.purpose}`
+                          ? ` · Zweck: ${application.certificateOfConduct.purpose} · Versand an ${application.certificateOfConduct.deliveryRecipient}, ${application.certificateOfConduct.deliveryStreet}, ${application.certificateOfConduct.deliveryPostalCode} ${application.certificateOfConduct.deliveryCity}`
                           : ""}
                       </p>
                       {application.documents.length > 0 ? (
@@ -595,13 +830,49 @@ function App(): JSX.Element {
                               >
                                 {document.originalName}
                               </a>
+                              {application.status === "SUBMITTED" ? (
+                                <div className="document-actions">
+                                  <label className="file-button">
+                                    Ersetzen
+                                    <input
+                                      className="visually-hidden"
+                                      type="file"
+                                      aria-label={`${document.originalName} ersetzen`}
+                                      accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                                      disabled={isLoading}
+                                      onChange={(event) => {
+                                        const file = event.target.files?.[0];
+                                        if (file) {
+                                          void handleDocumentReplace(
+                                            application.id,
+                                            document.id,
+                                            file
+                                          );
+                                        }
+                                        event.target.value = "";
+                                      }}
+                                    />
+                                  </label>
+                                  <button
+                                    className="ghost-button"
+                                    type="button"
+                                    disabled={isLoading}
+                                    onClick={() =>
+                                      void handleDocumentDelete(application.id, document.id)
+                                    }
+                                  >
+                                    Löschen
+                                  </button>
+                                </div>
+                              ) : null}
                             </li>
                           ))}
                         </ul>
                       ) : (
                         <p>Kein Dokument vorhanden.</p>
                       )}
-                      {application.status === "SUBMITTED" ? (
+                      {application.status === "SUBMITTED"
+                      && application.type !== "CERTIFICATE_OF_CONDUCT" ? (
                         <label className="field upload-box">
                           Weiteres Dokument hochladen
                           <input
@@ -618,6 +889,25 @@ function App(): JSX.Element {
                           />
                         </label>
                       ) : null}
+                      <ApplicationCommentThread comments={application.comments ?? []} />
+                    </div>
+                    <div className="application-actions">
+                      <span className={statusClassName(application.status)}>
+                        {statusLabels[application.status]}
+                      </span>
+                      <button
+                        className="ghost-button"
+                        type="button"
+                        disabled={isLoading || application.status !== "SUBMITTED"}
+                        title={
+                          application.status === "SUBMITTED"
+                            ? "Antrag bearbeiten"
+                            : "Bearbeitung nach Beginn der Prüfung nicht mehr möglich"
+                        }
+                        onClick={() => openApplicationEditor(application)}
+                      >
+                        Bearbeiten
+                      </button>
                     </div>
                     <div className="application-actions">
                       <span className={statusClassName(application.status)}>{statusLabels[application.status]}</span>
@@ -686,6 +976,10 @@ function App(): JSX.Element {
             </>
           ) : null}
 
+          {user.role === "CITIZEN" && view === "documents" ? (
+            <CitizenDocuments applications={applications} />
+          ) : null}
+
           {user.role === "CASEWORKER" ? (
             chatApplication ? (
               <ApplicationChat
@@ -702,6 +996,12 @@ function App(): JSX.Element {
                 onOpenChat={openChat}
               />
             )
+            <CaseworkerApplications
+              applications={applications}
+              isUpdating={isLoading}
+              onStatusChange={handleStatusChange}
+              onComment={handleApplicationComment}
+            />
           ) : null}
         </main>
       </div>

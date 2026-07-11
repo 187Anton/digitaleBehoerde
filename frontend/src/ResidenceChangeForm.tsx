@@ -1,23 +1,33 @@
 import { FormEvent, useState } from "react";
-import type { ResidenceChangeInput } from "./api";
+import type { ResidenceChangeDocuments, ResidenceChangeInput } from "./api";
 
 type Props = {
   isSubmitting: boolean;
-  onSubmit: (data: ResidenceChangeInput, document: File) => Promise<void>;
+  onSubmit: (data: ResidenceChangeInput, documents: ResidenceChangeDocuments) => Promise<void>;
+  initialData?: ResidenceChangeInput;
+  isEditing?: boolean;
+  onSubmit: (data: ResidenceChangeInput, document: File | null) => Promise<void>;
 };
 
-export function ResidenceChangeForm({ isSubmitting, onSubmit }: Props): JSX.Element {
+export function ResidenceChangeForm({
+  isSubmitting,
+  initialData,
+  isEditing = false,
+  onSubmit,
+}: Props): JSX.Element {
   const [form, setForm] = useState<ResidenceChangeInput>({
-    moveDate: "",
-    oldStreet: "",
-    oldPostalCode: "",
-    oldCity: "",
-    newStreet: "",
-    newPostalCode: "",
-    newCity: "",
-    householdSize: 1,
+    moveDate: initialData?.moveDate.slice(0, 10) ?? "",
+    oldStreet: initialData?.oldStreet ?? "",
+    oldPostalCode: initialData?.oldPostalCode ?? "",
+    oldCity: initialData?.oldCity ?? "",
+    newStreet: initialData?.newStreet ?? "",
+    newPostalCode: initialData?.newPostalCode ?? "",
+    newCity: initialData?.newCity ?? "",
+    householdSize: initialData?.householdSize ?? 1,
   });
-  const [document, setDocument] = useState<File | null>(null);
+  const [identityDocument, setIdentityDocument] = useState<File | null>(null);
+  const [landlordConfirmation, setLandlordConfirmation] = useState<File | null>(null);
+  const [moveInConfirmation, setMoveInConfirmation] = useState<File | null>(null);
 
   function update<K extends keyof ResidenceChangeInput>(key: K, value: ResidenceChangeInput[K]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -25,9 +35,14 @@ export function ResidenceChangeForm({ isSubmitting, onSubmit }: Props): JSX.Elem
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (document) {
-      await onSubmit(form, document);
+    if (identityDocument && landlordConfirmation) {
+      await onSubmit(form, {
+        identityDocument,
+        landlordConfirmation,
+        ...(moveInConfirmation ? { moveInConfirmation } : {}),
+      });
     }
+    await onSubmit(form, document);
   }
 
   return (
@@ -125,18 +140,52 @@ export function ResidenceChangeForm({ isSubmitting, onSubmit }: Props): JSX.Elem
       </label>
 
       <label className="field upload-box">
-        Nachweisdokument (PDF, JPEG oder PNG, maximal 5 MB)
+        Personalausweis (Pflicht, PDF, JPEG oder PNG, maximal 5 MB)
         <input
           type="file"
           accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-          onChange={(event) => setDocument(event.target.files?.[0] ?? null)}
+          onChange={(event) => setIdentityDocument(event.target.files?.[0] ?? null)}
           required
+        />
+      </label>
+      {!isEditing ? (
+        <label className="field upload-box">
+          Nachweisdokument (PDF, JPEG oder PNG, maximal 5 MB)
+          <input
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+            onChange={(event) => setDocument(event.target.files?.[0] ?? null)}
+            required
+          />
+        </label>
+      ) : null}
+
+      <label className="field upload-box">
+        Wohnungsgeberbestätigung (Pflicht, PDF, JPEG oder PNG, maximal 5 MB)
+        <input
+          type="file"
+          accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+          onChange={(event) => setLandlordConfirmation(event.target.files?.[0] ?? null)}
+          required
+        />
+      </label>
+
+      <label className="field upload-box">
+        Einzugsbestätigung (optional, PDF, JPEG oder PNG, maximal 5 MB)
+        <input
+          type="file"
+          accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+          onChange={(event) => setMoveInConfirmation(event.target.files?.[0] ?? null)}
         />
       </label>
 
       <div className="button-row">
         <button className="primary-button" type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Antrag wird gesendet ..." : "Wohnsitzummeldung absenden"}
+          {isSubmitting
+            ? "Antrag wird gespeichert ..."
+            : isEditing
+              ? "Änderungen speichern"
+              : "Wohnsitzummeldung absenden"}
         </button>
       </div>
     </form>

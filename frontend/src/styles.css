@@ -608,7 +608,7 @@ a {
 .document-row,
 .upload-box {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
   padding: 13px;
@@ -617,11 +617,82 @@ a {
   border: 1px solid var(--line);
 }
 
+.document-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.application-actions {
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .document-table {
   margin-top: 12px;
 }
 
+.citizen-document-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+.document-preview-card {
+  display: grid;
+  gap: 12px;
+  padding: 13px;
+  border-radius: 8px;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+}
+
+.citizen-document-row > div:nth-child(2) {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+.document-preview-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.document-preview-header > div:last-child {
+  display: grid;
+  gap: 4px;
+}
+
+.document-preview {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.document-preview-pdf {
+  min-height: 520px;
+}
+
+.document-preview-image {
+  max-height: 520px;
+  object-fit: contain;
+}
+
 .upload-box {
+  grid-template-columns: auto minmax(0, 1fr);
   border-style: dashed;
   margin-top: 10px;
 }
@@ -676,6 +747,11 @@ a {
   color: var(--muted);
   font-size: 0.86rem;
   font-weight: 400;
+}
+
+.field span.field-error {
+  color: #a61b1b;
+  font-weight: 600;
 }
 
 .field input,
@@ -755,6 +831,33 @@ a {
   gap: 14px;
 }
 
+.password-input {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.password-toggle {
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 14px;
+  background: var(--surface);
+  color: var(--primary-dark);
+  font: inherit;
+  cursor: pointer;
+}
+
+.password-toggle:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.password-toggle:focus-visible {
+  outline: 3px solid rgba(18, 100, 200, 0.24);
+  outline-offset: 2px;
+}
+
 .message-banner {
   padding: 13px 16px;
   border-radius: 8px;
@@ -769,10 +872,92 @@ a {
   gap: 14px;
 }
 
+.filter-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-tabs button {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.filter-tabs button:hover,
+.filter-tabs button.active {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+}
+
+.filter-tabs button.active {
+  font-weight: 700;
+}
+
+.filter-toolbar {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 320px));
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
 .caseworker-card h3,
 .caseworker-card h4,
 .caseworker-card p {
   margin: 0;
+}
+
+.comment-thread {
+  display: grid;
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.comment-list {
+  display: grid;
+  gap: 10px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.comment-list li {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+}
+
+.comment-list p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.comment-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.comment-form {
+  display: grid;
+  gap: 10px;
+}
+
+.comment-form .primary-button {
+  justify-self: start;
 }
 
 .detail-list {
@@ -803,7 +988,7 @@ a {
   }
 
   .nav-list {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .sidebar-note {
@@ -850,6 +1035,10 @@ a {
     grid-template-columns: 1fr;
   }
 
+  .filter-toolbar {
+    grid-template-columns: 1fr;
+  }
+
   .hero-panel,
   .profile-hero,
   .section,
@@ -860,6 +1049,7 @@ a {
 
   .application-row,
   .document-row,
+  .citizen-document-row,
   .upload-box,
   .detail-list {
     grid-template-columns: 1fr;

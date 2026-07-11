@@ -1,6 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { registerSchema, loginSchema } from "../src/schemas/auth.schema.js";
 import { chatMessageSchema, residenceChangeSchema } from "../src/schemas/application.schema.js";
+import {
+  applicationCommentSchema,
+  residenceChangeSchema,
+} from "../src/schemas/application.schema.js";
 describe("registerSchema", () => {
   it("akzeptiert gueltige Registrierungsdaten", () => {
     const result = registerSchema.safeParse({
@@ -66,10 +70,12 @@ describe("residenceChangeSchema", () => {
     ).toBe(false);
   });
 
-  it("lehnt ungueltige Kalenderdaten ab", () => {
-    expect(
-      residenceChangeSchema.safeParse({ ...validPayload, moveDate: "2026-02-30" }).success
-    ).toBe(false);
+  it("lehnt ungültige Kalenderdaten ab", () => {
+    const result = residenceChangeSchema.safeParse({ ...validPayload, moveDate: "2026-02-30" });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.message).toBe("Einzugsdatum ist ungültig");
+    }
   });
 
   it("begrenzt die Haushaltsgroesse", () => {
@@ -89,5 +95,15 @@ describe("chatMessageSchema", () => {
   it("lehnt leere und zu lange Nachrichten ab", () => {
     expect(chatMessageSchema.safeParse({ body: "   " }).success).toBe(false);
     expect(chatMessageSchema.safeParse({ body: "x".repeat(2001) }).success).toBe(false);
+describe("applicationCommentSchema", () => {
+  it("trimmt einen gültigen Kommentar", () => {
+    expect(applicationCommentSchema.parse({ body: "  Rückfrage zum Nachweis  " }).body).toBe(
+      "Rückfrage zum Nachweis"
+    );
+  });
+
+  it("lehnt leere und zu lange Kommentare ab", () => {
+    expect(applicationCommentSchema.safeParse({ body: "   " }).success).toBe(false);
+    expect(applicationCommentSchema.safeParse({ body: "x".repeat(2001) }).success).toBe(false);
   });
 });
