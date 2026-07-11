@@ -669,6 +669,52 @@ a {
   margin: 0;
 }
 
+.comment-thread {
+  display: grid;
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.comment-list {
+  display: grid;
+  gap: 10px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.comment-list li {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+}
+
+.comment-list p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.comment-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.comment-form {
+  display: grid;
+  gap: 10px;
+}
+
+.comment-form .primary-button {
+  justify-self: start;
+}
+
 .detail-list {
   display: grid;
   grid-template-columns: minmax(160px, auto) minmax(0, 1fr);

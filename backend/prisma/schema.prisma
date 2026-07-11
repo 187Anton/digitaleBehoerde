@@ -28,19 +28,20 @@ enum ApplicationStatus {
 }
 
 model User {
-  id           String        @id @default(uuid())
-  email        String        @unique
-  passwordHash String        @map("password_hash")
-  role         Role          @default(CITIZEN)
-  firstName    String?       @map("first_name")
-  lastName     String?       @map("last_name")
-  birthDate    DateTime?     @map("birth_date") @db.Date
-  birthPlace   String?       @map("birth_place")
+  id           String               @id @default(uuid())
+  email        String               @unique
+  passwordHash String               @map("password_hash")
+  role         Role                 @default(CITIZEN)
+  firstName    String?              @map("first_name")
+  lastName     String?              @map("last_name")
+  birthDate    DateTime?            @map("birth_date") @db.Date
+  birthPlace   String?              @map("birth_place")
   street       String?
-  postalCode   String?       @map("postal_code")
+  postalCode   String?              @map("postal_code")
   city         String?
-  createdAt    DateTime      @default(now()) @map("created_at")
+  createdAt    DateTime             @default(now()) @map("created_at")
   applications Application[]
+  comments     ApplicationComment[] @relation("CommentAuthor")
 
   @@map("users")
 }
@@ -57,9 +58,24 @@ model Application {
   dogTax               DogTax?
   certificateOfConduct CertificateOfConduct?
   documents            Document[]
+  comments             ApplicationComment[]
 
   @@index([userId, createdAt])
   @@map("applications")
+}
+
+model ApplicationComment {
+  id            String      @id @default(uuid())
+  applicationId String      @map("application_id")
+  authorId      String      @map("author_id")
+  body          String
+  createdAt     DateTime    @default(now()) @map("created_at")
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  author        User        @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([applicationId, createdAt])
+  @@index([authorId])
+  @@map("application_comments")
 }
 
 model Document {

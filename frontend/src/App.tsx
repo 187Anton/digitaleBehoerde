@@ -7,6 +7,7 @@ import {
   CertificateOfConductInput,
   ProfileUpdateInput,
   Service,
+  addApplicationComment,
   applicationDocumentUrl,
   createResidenceChange,
   createDogTax,
@@ -27,6 +28,7 @@ import { ResidenceChangeForm } from "./ResidenceChangeForm";
 import { DogTaxForm } from "./DogTaxForm";
 import { ProfileForm } from "./ProfileForm";
 import { CertificateOfConductForm } from "./CertificateOfConductForm";
+import { ApplicationCommentThread } from "./ApplicationCommentThread";
 type Mode = "login" | "register";
 type View = "catalog" | "service-detail" | "applications" | "profile";
 
@@ -276,6 +278,30 @@ function App(): JSX.Element {
       setMessage("Antragsstatus wurde aktualisiert.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Status konnte nicht geändert werden.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+  async function handleApplicationComment(applicationId: string, body: string): Promise<boolean> {
+    setIsLoading(true);
+    setMessage("");
+    try {
+      const response = await addApplicationComment(applicationId, body);
+      setApplications((current) =>
+        current.map((application) =>
+          application.id === applicationId
+            ? {
+                ...application,
+                comments: [...(application.comments ?? []), response.comment],
+              }
+            : application
+        )
+      );
+      setMessage("Kommentar wurde hinzugefügt.");
+      return true;
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Kommentar konnte nicht gespeichert werden.");
+      return false;
     } finally {
       setIsLoading(false);
     }
@@ -544,6 +570,7 @@ function App(): JSX.Element {
                           />
                         </label>
                       ) : null}
+                      <ApplicationCommentThread comments={application.comments ?? []} />
                     </div>
                     <span className={statusClassName(application.status)}>{statusLabels[application.status]}</span>
                   </li>
@@ -573,6 +600,7 @@ function App(): JSX.Element {
               applications={applications}
               isUpdating={isLoading}
               onStatusChange={handleStatusChange}
+              onComment={handleApplicationComment}
             />
           ) : null}
         </main>

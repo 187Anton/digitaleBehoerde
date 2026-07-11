@@ -32,6 +32,14 @@ applicationsRouter.get("/", async (req, res) => {
       dogTax: true,
       certificateOfConduct: true,
       documents: { select: publicDocumentSelect },
+      comments: {
+        include: {
+          author: {
+            select: { id: true, role: true, firstName: true, lastName: true },
+          },
+        },
+        orderBy: { createdAt: "asc" },
+      },
     },
     orderBy: { createdAt: "desc" },
   });
