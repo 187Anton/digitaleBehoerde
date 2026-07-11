@@ -3,10 +3,9 @@ import type { ResidenceChangeDocuments, ResidenceChangeInput } from "./api";
 
 type Props = {
   isSubmitting: boolean;
-  onSubmit: (data: ResidenceChangeInput, documents: ResidenceChangeDocuments) => Promise<void>;
   initialData?: ResidenceChangeInput;
   isEditing?: boolean;
-  onSubmit: (data: ResidenceChangeInput, document: File | null) => Promise<void>;
+  onSubmit: (data: ResidenceChangeInput, documents?: ResidenceChangeDocuments) => Promise<void>;
 };
 
 export function ResidenceChangeForm({
@@ -35,14 +34,15 @@ export function ResidenceChangeForm({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (identityDocument && landlordConfirmation) {
+    if (isEditing) {
+      await onSubmit(form);
+    } else if (identityDocument && landlordConfirmation) {
       await onSubmit(form, {
         identityDocument,
         landlordConfirmation,
         ...(moveInConfirmation ? { moveInConfirmation } : {}),
       });
     }
-    await onSubmit(form, document);
   }
 
   return (
@@ -148,18 +148,6 @@ export function ResidenceChangeForm({
           required
         />
       </label>
-      {!isEditing ? (
-        <label className="field upload-box">
-          Nachweisdokument (PDF, JPEG oder PNG, maximal 5 MB)
-          <input
-            type="file"
-            accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-            onChange={(event) => setDocument(event.target.files?.[0] ?? null)}
-            required
-          />
-        </label>
-      ) : null}
-
       <label className="field upload-box">
         Wohnungsgeberbestätigung (Pflicht, PDF, JPEG oder PNG, maximal 5 MB)
         <input

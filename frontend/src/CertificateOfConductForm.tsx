@@ -3,7 +3,7 @@ import type { CertificateOfConductInput } from "./api";
 
 type Props = {
   isSubmitting: boolean;
-  initialData?: CertificateOfConductInput;
+  initialData?: Partial<CertificateOfConductInput>;
   isEditing?: boolean;
   onSubmit: (data: CertificateOfConductInput) => Promise<void>;
 };
@@ -17,6 +17,10 @@ export function CertificateOfConductForm({
   const [form, setForm] = useState<CertificateOfConductInput>({
     purpose: initialData?.purpose ?? "",
     deliveryType: initialData?.deliveryType ?? "PRIVATE",
+    deliveryRecipient: initialData?.deliveryRecipient ?? "",
+    deliveryStreet: initialData?.deliveryStreet ?? "",
+    deliveryPostalCode: initialData?.deliveryPostalCode ?? "",
+    deliveryCity: initialData?.deliveryCity ?? "",
   });
 
   function update<K extends keyof CertificateOfConductInput>(

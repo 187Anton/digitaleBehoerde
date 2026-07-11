@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { applicationDocumentUrl, type Application, type ApplicationStatus } from "./api";
 import { ApplicationCommentThread } from "./ApplicationCommentThread";
 import {
   applicationDocumentPreviewUrl,
@@ -262,18 +261,6 @@ export function CaseworkerApplications({
             {application.documents.length > 0 ? (
               <ul className="document-table">
                 {application.documents.map((document) => (
-                  <li className="document-row" key={document.id}>
-                    <div className="doc-icon">{documentBadgeLabel(document.originalName)}</div>
-                    <div>
-                      <a
-                        href={applicationDocumentUrl(application.id, document.id)}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {document.originalName}
-                      </a>
-                      <span>{documentTypeLabels[document.type]}</span>
-                    </div>
                   <li className="document-preview-card" key={document.id}>
                     <div className="document-preview-header">
                       <div className="doc-icon">{documentBadgeLabel(document.originalName)}</div>

@@ -651,6 +651,8 @@ a {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
+}
+
 .document-preview-card {
   display: grid;
   gap: 12px;
@@ -664,6 +666,8 @@ a {
   display: grid;
   gap: 4px;
   min-width: 0;
+}
+
 .document-preview-header {
   display: flex;
   align-items: center;

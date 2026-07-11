@@ -5,6 +5,7 @@ import { requireAuth, requireRole } from "../middleware/requireAuth.js";
 import {
   applicationCommentSchema,
   applicationStatusSchema,
+  chatMessageSchema,
 } from "../schemas/application.schema.js";
 import { publicDocumentSelect } from "../lib/upload.js";
 import { applicationStatusChanges } from "../lib/metrics.js";
@@ -30,6 +31,7 @@ const applicationInclude = {
         where: { readByCaseworkerAt: null },
       },
     },
+  },
   comments: {
     include: {
       author: {

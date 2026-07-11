@@ -84,7 +84,6 @@ export type ApplicationDocument = {
   uploadedAt: string;
 };
 export type ChatMessage = {
-export type ApplicationComment = {
   id: string;
   applicationId: string;
   authorId: string;
@@ -92,6 +91,19 @@ export type ApplicationComment = {
   createdAt: string;
   readByCitizenAt: string | null;
   readByCaseworkerAt: string | null;
+  author: {
+    id: string;
+    role: "CITIZEN" | "CASEWORKER";
+    firstName: string | null;
+    lastName: string | null;
+  };
+};
+export type ApplicationComment = {
+  id: string;
+  applicationId: string;
+  authorId: string;
+  body: string;
+  createdAt: string;
   author: {
     id: string;
     role: "CITIZEN" | "CASEWORKER";
@@ -319,6 +331,8 @@ export function sendApplicationChatMessage(
     method: "POST",
     body: JSON.stringify({ body }),
   });
+}
+
 export function addApplicationComment(
   applicationId: string,
   body: string

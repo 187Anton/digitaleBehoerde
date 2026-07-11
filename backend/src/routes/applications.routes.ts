@@ -34,11 +34,21 @@ const chatMessageInclude = {
       lastName: true,
     },
   },
+} as const;
+
 const citizenApplicationInclude = {
   residenceChange: true,
   dogTax: true,
   certificateOfConduct: true,
   documents: { select: publicDocumentSelect },
+  comments: {
+    include: {
+      author: {
+        select: { id: true, role: true, firstName: true, lastName: true },
+      },
+    },
+    orderBy: { createdAt: "asc" },
+  },
 } as const;
 
 applicationsRouter.use(requireAuth);
@@ -47,10 +57,7 @@ applicationsRouter.get("/", async (req, res) => {
   const applications = await prisma.application.findMany({
     where: { userId: req.user!.userId },
     include: {
-      residenceChange: true,
-      dogTax: true,
-      certificateOfConduct: true,
-      documents: { select: publicDocumentSelect },
+      ...citizenApplicationInclude,
       _count: {
         select: {
           chatMessages: {
@@ -60,16 +67,8 @@ applicationsRouter.get("/", async (req, res) => {
             },
           },
         },
-      comments: {
-        include: {
-          author: {
-            select: { id: true, role: true, firstName: true, lastName: true },
-          },
-        },
-        orderBy: { createdAt: "asc" },
       },
     },
-    include: citizenApplicationInclude,
     orderBy: { createdAt: "desc" },
   });
 
@@ -252,13 +251,6 @@ applicationsRouter.get("/:id/messages", async (req, res) => {
   const application = await prisma.application.findFirst({
     where: { id: req.params.id, userId: req.user!.userId },
     select: { id: true },
-applicationsRouter.patch("/:id", async (req, res) => {
-  if (req.user!.role !== "CITIZEN") {
-    return res.status(403).json({ error: "Nur Bürger können eigene Anträge bearbeiten" });
-  }
-
-  const application = await prisma.application.findFirst({
-    where: { id: req.params.id, userId: req.user!.userId },
   });
   if (!application) {
     return res.status(404).json({ error: "Antrag nicht gefunden" });
@@ -306,6 +298,19 @@ applicationsRouter.post("/:id/messages", async (req, res) => {
     include: chatMessageInclude,
   });
   return res.status(201).json({ message });
+});
+
+applicationsRouter.patch("/:id", async (req, res) => {
+  if (req.user!.role !== "CITIZEN") {
+    return res.status(403).json({ error: "Nur Bürger können eigene Anträge bearbeiten" });
+  }
+
+  const application = await prisma.application.findFirst({
+    where: { id: req.params.id, userId: req.user!.userId },
+  });
+  if (!application) {
+    return res.status(404).json({ error: "Antrag nicht gefunden" });
+  }
   if (application.status !== "SUBMITTED") {
     return res.status(409).json({ error: "Antrag kann nicht mehr bearbeitet werden" });
   }
