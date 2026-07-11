@@ -25,14 +25,20 @@ test("Bürger reicht Wohnsitzummeldung ein und Sachbearbeiter genehmigt sie", as
   await newAddress.getByLabel("Ort").fill("Berlin");
   await page.getByLabel("Anzahl umziehender Personen").fill("2");
   await page
-    .getByLabel("Nachweisdokument (PDF, JPEG oder PNG, maximal 5 MB)")
+    .getByLabel("Personalausweis (Pflicht, PDF, JPEG oder PNG, maximal 5 MB)")
+    .setInputFiles("e2e/fixtures/nachweis.pdf");
+  await page
+    .getByLabel("Wohnungsgeberbestätigung (Pflicht, PDF, JPEG oder PNG, maximal 5 MB)")
     .setInputFiles("e2e/fixtures/nachweis.pdf");
   await page.getByRole("button", { name: "Wohnsitzummeldung absenden" }).click();
 
   await expect(page.getByText("Wohnsitzummeldung wurde erfolgreich eingereicht.")).toBeVisible();
   const citizenApplication = page.locator("li").filter({ hasText: newStreet });
   await expect(citizenApplication).toHaveCount(1);
-  await expect(citizenApplication.getByRole("link", { name: "nachweis.pdf" })).toBeVisible();
+  await expect(citizenApplication.getByText("Personalausweis", { exact: true })).toBeVisible();
+  await expect(
+    citizenApplication.getByText("Wohnungsgeberbestätigung", { exact: true })
+  ).toBeVisible();
 
   await page.getByRole("button", { name: "Abmelden" }).click();
   await page.getByLabel("E-Mail").fill("sachbearbeiter@example.com");
@@ -42,7 +48,10 @@ test("Bürger reicht Wohnsitzummeldung ein und Sachbearbeiter genehmigt sie", as
   await expect(page.getByRole("heading", { name: "Antragsbearbeitung" })).toBeVisible();
   const caseworkerApplication = page.locator("article").filter({ hasText: newStreet });
   await expect(caseworkerApplication).toHaveCount(1);
-  await expect(caseworkerApplication.getByRole("link", { name: "nachweis.pdf" })).toBeVisible();
+  await expect(caseworkerApplication.getByText("Personalausweis", { exact: true })).toBeVisible();
+  await expect(
+    caseworkerApplication.getByText("Wohnungsgeberbestätigung", { exact: true })
+  ).toBeVisible();
 
   await caseworkerApplication.getByRole("button", { name: "Bearbeitung beginnen" }).click();
   await expect(caseworkerApplication.getByText("In Bearbeitung", { exact: true })).toBeVisible();

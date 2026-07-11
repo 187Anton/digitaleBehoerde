@@ -3,6 +3,7 @@ import {
   Application,
   AuthResponse,
   ResidenceChangeInput,
+  ResidenceChangeDocuments,
   DogTaxInput,
   CertificateOfConductInput,
   ProfileUpdateInput,
@@ -45,6 +46,12 @@ const serviceCategoryLabels: Record<Service["type"], string> = {
   RESIDENCE_CHANGE: "Meldewesen",
   DOG_TAX: "Kommunale Steuer",
   CERTIFICATE_OF_CONDUCT: "Bescheinigung",
+};
+const documentTypeLabels: Record<Application["documents"][number]["type"], string> = {
+  OTHER: "Weiteres Dokument",
+  IDENTITY_DOCUMENT: "Personalausweis",
+  LANDLORD_CONFIRMATION: "Wohnungsgeberbestätigung",
+  MOVE_IN_CONFIRMATION: "Einzugsbestätigung",
 };
 
 const statusClassNames: Record<Application["status"], string> = {
@@ -152,25 +159,14 @@ function App(): JSX.Element {
     setActiveService(null);
     setView("catalog");
   }
-  async function handleResidenceChange(data: ResidenceChangeInput, document: File) {
+  async function handleResidenceChange(
+    data: ResidenceChangeInput,
+    documents: ResidenceChangeDocuments
+  ) {
     setIsLoading(true);
     setMessage("");
     try {
-      const response = await createResidenceChange(data);
-      try {
-        const uploadResponse = await uploadApplicationDocument(response.application.id, document);
-        response.application.documents = [uploadResponse.document];
-      } catch (error) {
-        setApplications((current) => [response.application, ...current]);
-        setView("applications");
-        setActiveService(null);
-        setMessage(
-          `Antrag wurde angelegt, aber das Dokument fehlt: ${
-            error instanceof Error ? error.message : "Upload fehlgeschlagen."
-          }`
-        );
-        return;
-      }
+      const response = await createResidenceChange(data, documents);
       setApplications((current) => [response.application, ...current]);
       setView("applications");
       setActiveService(null);
@@ -514,13 +510,16 @@ function App(): JSX.Element {
                           {application.documents.map((document) => (
                             <li className="document-row" key={document.id}>
                               <div className="doc-icon">{documentBadgeLabel(document.originalName)}</div>
-                              <a
-                                href={applicationDocumentUrl(application.id, document.id)}
-                                target="_blank"
-                                rel="noreferrer"
-                              >
-                                {document.originalName}
-                              </a>
+                              <div>
+                                <a
+                                  href={applicationDocumentUrl(application.id, document.id)}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  {document.originalName}
+                                </a>
+                                <span>{documentTypeLabels[document.type]}</span>
+                              </div>
                             </li>
                           ))}
                         </ul>
