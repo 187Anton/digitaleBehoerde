@@ -47,6 +47,11 @@ const serviceCategoryLabels: Record<Service["type"], string> = {
   DOG_TAX: "Kommunale Steuer",
   CERTIFICATE_OF_CONDUCT: "Bescheinigung",
 };
+const serviceGlyphs: Record<Service["type"], string> = {
+  RESIDENCE_CHANGE: "⌂",
+  DOG_TAX: "✦",
+  CERTIFICATE_OF_CONDUCT: "▤",
+};
 
 const statusClassNames: Record<Application["status"], string> = {
   SUBMITTED: "submitted",
@@ -406,6 +411,7 @@ function App(): JSX.Element {
               type="button"
               onClick={backToCatalog}
             >
+              <span className="nav-icon" aria-hidden="true">⌂</span>
               Antragskatalog
             </button>
             <button
@@ -413,6 +419,7 @@ function App(): JSX.Element {
               type="button"
               onClick={() => setView("applications")}
             >
+              <span className="nav-icon" aria-hidden="true">▤</span>
               Meine Anträge ({applications.length})
             </button>
             <button
@@ -423,6 +430,7 @@ function App(): JSX.Element {
                 setView("messages");
               }}
             >
+              <span className="nav-icon" aria-hidden="true">◌</span>
               Nachrichten ({unreadChatMessages})
             </button>
             <button
@@ -430,6 +438,7 @@ function App(): JSX.Element {
               type="button"
               onClick={() => setView("profile")}
             >
+              <span className="nav-icon" aria-hidden="true">◎</span>
               Mein Profil
             </button>
           </nav>
@@ -463,22 +472,29 @@ function App(): JSX.Element {
             <>
               <section className="hero-panel">
                 <div className="hero-copy">
-                  <span className="eyebrow">Online-Serviceportal</span>
-                  <h2>Online-Anträge starten</h2>
-                  <p>Bitte wählen Sie einen Vorgang. Verfügbare Leistungen können direkt online eingereicht werden.</p>
+                  <span className="eyebrow">✦ Ihr digitales Rathaus</span>
+                  <h2>Behördengänge, die sich endlich leicht anfühlen.</h2>
+                  <p>Stellen Sie Ihre Anträge sicher online, behalten Sie den Überblick und bleiben Sie direkt mit der Sachbearbeitung in Kontakt.</p>
+                  <div className="hero-status">
+                    <div className="metric">
+                      <strong>{services.length}</strong>
+                      <span>Online-Vorgänge</span>
+                    </div>
+                    <div className="metric">
+                      <strong>{applications.length}</strong>
+                      <span>Meine Anträge</span>
+                    </div>
+                    <div className="metric">
+                      <strong>{completedApplications}</strong>
+                      <span>Erledigt</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="hero-status">
-                  <div className="metric">
-                    <strong>{services.length}</strong>
-                    <span>Vorgänge</span>
-                  </div>
-                  <div className="metric">
-                    <strong>{applications.length}</strong>
-                    <span>Meine Anträge</span>
-                  </div>
-                  <div className="metric">
-                    <strong>{completedApplications}</strong>
-                    <span>Genehmigt</span>
+                <div className="hero-art" aria-hidden="true">
+                  <img src="/images/civic-portal-hero.png" alt="" />
+                  <div className="hero-art-label">
+                    <span>✓</span>
+                    <strong>Einfach. Sicher. Digital.</strong>
                   </div>
                 </div>
               </section>
@@ -497,6 +513,7 @@ function App(): JSX.Element {
                       key={service.type}
                       onClick={() => openService(service)}
                     >
+                      <span className="service-symbol" aria-hidden="true">{serviceGlyphs[service.type]}</span>
                       <span className="service-kicker">{serviceCategoryLabels[service.type]}</span>
                       <div className="card-footer">
                         <h3>{service.title}</h3>
