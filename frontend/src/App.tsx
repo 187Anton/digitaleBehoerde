@@ -31,6 +31,7 @@ import { ResidenceChangeForm } from "./ResidenceChangeForm";
 import { DogTaxForm } from "./DogTaxForm";
 import { ProfileForm } from "./ProfileForm";
 import { CertificateOfConductForm } from "./CertificateOfConductForm";
+import { CitizenDocuments } from "./CitizenDocuments";
 type Mode = "login" | "register";
 type View = "catalog" | "service-detail" | "applications" | "edit-application" | "profile";
 
@@ -68,6 +69,7 @@ const viewTitles: Record<View, string> = {
   catalog: "Antragskatalog",
   "service-detail": "Antrag stellen",
   applications: "Meine Anträge",
+  documents: "Meine Dokumente",
   "edit-application": "Antrag bearbeiten",
   profile: "Mein Profil",
 };
@@ -490,6 +492,10 @@ function App(): JSX.Element {
   const topbarTitle = user.role === "CASEWORKER" ? "Antragsbearbeitung" : viewTitles[view];
   const completedApplications = applications.filter((application) => application.status === "APPROVED").length;
   const openApplications = applications.filter((application) => application.status !== "APPROVED").length;
+  const documentCount = applications.reduce(
+    (count, application) => count + application.documents.length,
+    0
+  );
 
   return (
     <div className="app-shell">
@@ -516,6 +522,13 @@ function App(): JSX.Element {
               onClick={() => setView("applications")}
             >
               Meine Anträge ({applications.length})
+            </button>
+            <button
+              className={`nav-item ${view === "documents" ? "active" : ""}`}
+              type="button"
+              onClick={() => setView("documents")}
+            >
+              Dokumente ({documentCount})
             </button>
             <button
               className={`nav-item ${view === "profile" ? "active" : ""}`}
@@ -819,6 +832,10 @@ function App(): JSX.Element {
                 <ProfileForm user={user} isSubmitting={isLoading} onSubmit={handleProfileUpdate} />
               </section>
             </>
+          ) : null}
+
+          {user.role === "CITIZEN" && view === "documents" ? (
+            <CitizenDocuments applications={applications} />
           ) : null}
 
           {user.role === "CASEWORKER" ? (

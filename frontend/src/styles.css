@@ -541,6 +541,10 @@ a {
   margin-top: 12px;
 }
 
+.citizen-document-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
 .document-preview-card {
   display: grid;
   gap: 12px;
@@ -550,6 +554,10 @@ a {
   border: 1px solid var(--line);
 }
 
+.citizen-document-row > div:nth-child(2) {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
 .document-preview-header {
   display: flex;
   align-items: center;
@@ -792,7 +800,7 @@ a {
   }
 
   .nav-list {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .sidebar-note {
@@ -847,6 +855,7 @@ a {
 
   .application-row,
   .document-row,
+  .citizen-document-row,
   .upload-box,
   .detail-list {
     grid-template-columns: 1fr;
