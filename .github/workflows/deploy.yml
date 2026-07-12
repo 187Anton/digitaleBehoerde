@@ -240,6 +240,14 @@ jobs:
       - name: Push frontend image
         run: docker push ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
 
+      - name: Set backend secrets
+        run: |
+          az containerapp secret set \
+            --name ${{ secrets.AZURE_BACKEND_APP }} \
+            --resource-group ${{ secrets.AZURE_RG }} \
+            --secrets \
+              "database-url=${{ secrets.DATABASE_URL }}" \
+              "jwt-secret=${{ secrets.JWT_SECRET }}"
       - name: Deploy backend to Azure Container App
         run: |
           az containerapp update \
@@ -249,7 +257,9 @@ jobs:
             --set-env-vars \
               "DOCUMENT_STORAGE=azure" \
               "AZURE_STORAGE_ACCOUNT=$DOCUMENT_STORAGE_ACCOUNT" \
-              "AZURE_STORAGE_CONTAINER=application-documents"
+              "AZURE_STORAGE_CONTAINER=application-documents" \
+              "DATABASE_URL=secretref:database-url" \
+              "JWT_SECRET=secretref:jwt-secret"
 
       - name: Smoke test deployed backend
         run: |
