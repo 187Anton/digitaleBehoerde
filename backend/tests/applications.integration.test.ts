@@ -87,10 +87,7 @@ describe("Antrags-Endpunkte (Integration)", () => {
 
   it("aktualisiert einen eigenen eingereichten Antrag", async () => {
     const { cookie } = await createUser();
-    const created = await request(app)
-      .post("/api/applications/residence-change")
-      .set("Cookie", cookie)
-      .send(validPayload);
+    const created = await submitResidenceChange(cookie);
 
     const updated = await request(app)
       .patch(`/api/applications/${created.body.application.id}`)
@@ -106,10 +103,7 @@ describe("Antrags-Endpunkte (Integration)", () => {
 
   it("verhindert Änderungen nach Beginn der Bearbeitung", async () => {
     const { cookie } = await createUser();
-    const created = await request(app)
-      .post("/api/applications/residence-change")
-      .set("Cookie", cookie)
-      .send(validPayload);
+    const created = await submitResidenceChange(cookie);
     await prisma.application.update({
       where: { id: created.body.application.id },
       data: { status: "IN_REVIEW" },
@@ -132,12 +126,26 @@ describe("Antrags-Endpunkte (Integration)", () => {
     const created = await request(app)
       .post("/api/applications/certificate-of-conduct")
       .set("Cookie", cookie)
-      .send({ purpose: "Arbeitgeber", deliveryType: "PRIVATE" });
+      .send({
+        purpose: "Arbeitgeber",
+        deliveryType: "PRIVATE",
+        deliveryRecipient: "Max Mustermann",
+        deliveryStreet: "Musterstrasse 1",
+        deliveryPostalCode: "10115",
+        deliveryCity: "Berlin",
+      });
 
     const updated = await request(app)
       .patch(`/api/applications/${created.body.application.id}`)
       .set("Cookie", cookie)
-      .send({ purpose: "Ehrenamt", deliveryType: "AUTHORITY" });
+      .send({
+        purpose: "Ehrenamt",
+        deliveryType: "AUTHORITY",
+        deliveryRecipient: "Max Mustermann",
+        deliveryStreet: "Musterstrasse 1",
+        deliveryPostalCode: "10115",
+        deliveryCity: "Berlin",
+      });
 
     expect(updated.status).toBe(200);
     expect(updated.body.application.certificateOfConduct).toMatchObject({
@@ -262,10 +270,7 @@ describe("Antrags-Endpunkte (Integration)", () => {
 
   it("ersetzt und löscht ein Dokument eines eingereichten Antrags", async () => {
     const { cookie } = await createUser();
-    const created = await request(app)
-      .post("/api/applications/residence-change")
-      .set("Cookie", cookie)
-      .send(validPayload);
+    const created = await submitResidenceChange(cookie);
     const upload = await request(app)
       .post(`/api/applications/${created.body.application.id}/documents`)
       .set("Cookie", cookie)
@@ -296,7 +301,7 @@ describe("Antrags-Endpunkte (Integration)", () => {
       )
       .set("Cookie", cookie);
     expect(deleted.status).toBe(204);
-    expect(await prisma.document.count()).toBe(0);
+    expect(await prisma.document.count()).toBe(2);
   });
 
   it("lehnt nicht erlaubte Dateitypen ab", async () => {
@@ -344,9 +349,8 @@ describe("Antrags-Endpunkte (Integration)", () => {
       });
 
     expect(upload.status).toBe(400);
-    expect(await prisma.document.count()).toBe(2);
     expect(upload.body.error).toBe("Dokument darf maximal 5 MB groß sein.");
-    expect(await prisma.document.count()).toBe(0);
+    expect(await prisma.document.count()).toBe(2);
   });
 
   it("verhindert Uploads zu fremden Antraegen", async () => {
