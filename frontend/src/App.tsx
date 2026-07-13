@@ -104,7 +104,7 @@ function App(): JSX.Element {
   const [mode, setMode] = useState<Mode>("login");
   const [user, setUser] = useState<AuthResponse["user"] | null>(null);
   const [email, setEmail] = useState("buerger@example.com");
-  const [password, setPassword] = useState("password123");
+  const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [firstName, setFirstName] = useState("");
@@ -189,6 +189,13 @@ function App(): JSX.Element {
     } finally {
       setIsLoading(false);
     }
+  }
+  function switchAuthMode() {
+    setMode((current) => current === "login" ? "register" : "login");
+    setPassword("");
+    setPasswordConfirmation("");
+    setIsPasswordVisible(false);
+    setMessage("");
   }
   async function handleLogout() {
     setIsLoading(true);
@@ -499,6 +506,10 @@ function App(): JSX.Element {
                   type={isPasswordVisible ? "text" : "password"}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
+                  minLength={mode === "register" ? 8 : undefined}
+                  autoComplete="off"
+                  aria-invalid={passwordTooShort}
+                  aria-describedby={mode === "register" ? "password-requirements" : undefined}
                   required
                 />
                 <button
@@ -510,6 +521,15 @@ function App(): JSX.Element {
                   {isPasswordVisible ? "Verbergen" : "Anzeigen"}
                 </button>
               </span>
+              {mode === "register" ? (
+                <span
+                  id="password-requirements"
+                  className={passwordTooShort ? "field-error" : undefined}
+                  role={passwordTooShort ? "alert" : undefined}
+                >
+                  Das Passwort muss mindestens 8 Zeichen lang sein.
+                </span>
+              ) : null}
             </label>
             {mode === "register" ? (
               <>
@@ -520,6 +540,7 @@ function App(): JSX.Element {
                     value={passwordConfirmation}
                     onChange={(event) => setPasswordConfirmation(event.target.value)}
                     minLength={8}
+                    autoComplete="off"
                     aria-invalid={passwordsDiffer}
                     aria-describedby={passwordsDiffer ? "password-confirmation-error" : undefined}
                     required
@@ -547,7 +568,7 @@ function App(): JSX.Element {
           <button
             className="ghost-button"
             type="button"
-            onClick={() => setMode(mode === "login" ? "register" : "login")}
+            onClick={switchAuthMode}
           >
             {mode === "login" ? "Zur Registrierung" : "Zum Login"}
           </button>
