@@ -139,33 +139,37 @@ export function ResidenceChangeForm({
         />
       </label>
 
-      <label className="field upload-box">
-        Personalausweis (Pflicht, PDF, JPEG oder PNG, maximal 5 MB)
-        <input
-          type="file"
-          accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-          onChange={(event) => setIdentityDocument(event.target.files?.[0] ?? null)}
-          required
-        />
-      </label>
-      <label className="field upload-box">
-        Wohnungsgeberbestätigung (Pflicht, PDF, JPEG oder PNG, maximal 5 MB)
-        <input
-          type="file"
-          accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-          onChange={(event) => setLandlordConfirmation(event.target.files?.[0] ?? null)}
-          required
-        />
-      </label>
+      {!isEditing ? (
+        <>
+          <label className="field upload-box">
+            Personalausweis (Pflicht, PDF, JPEG oder PNG, maximal 5 MB)
+            <input
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+              onChange={(event) => setIdentityDocument(event.target.files?.[0] ?? null)}
+              required
+            />
+          </label>
+          <label className="field upload-box">
+            Wohnungsgeberbestätigung (Pflicht, PDF, JPEG oder PNG, maximal 5 MB)
+            <input
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+              onChange={(event) => setLandlordConfirmation(event.target.files?.[0] ?? null)}
+              required
+            />
+          </label>
 
-      <label className="field upload-box">
-        Einzugsbestätigung (optional, PDF, JPEG oder PNG, maximal 5 MB)
-        <input
-          type="file"
-          accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-          onChange={(event) => setMoveInConfirmation(event.target.files?.[0] ?? null)}
-        />
-      </label>
+          <label className="field upload-box">
+            Einzugsbestätigung (optional, PDF, JPEG oder PNG, maximal 5 MB)
+            <input
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+              onChange={(event) => setMoveInConfirmation(event.target.files?.[0] ?? null)}
+            />
+          </label>
+        </>
+      ) : null}
 
       <div className="button-row">
         <button className="primary-button" type="submit" disabled={isSubmitting}>
