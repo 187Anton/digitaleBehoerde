@@ -101,6 +101,7 @@ test("eingereichte Anträge und Dokumente können bearbeitet werden", async ({ p
 
   await editButtons.nth(0).click();
   await expect(page.getByRole("heading", { name: "Wohnsitz ummelden" })).toBeVisible();
+  await expect(page.locator('input[type="file"]')).toHaveCount(0);
   await page.getByLabel("Ort").nth(1).fill("Hamburg");
   await page.getByRole("button", { name: "Änderungen speichern" }).click();
   await expect(page.getByText("Antrag wurde aktualisiert.")).toBeVisible();
