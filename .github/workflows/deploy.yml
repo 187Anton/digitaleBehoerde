@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -112,11 +115,13 @@ jobs:
           npm --prefix frontend run test:e2e
 
       - name: Build Docker containers
+        if: github.event_name == 'push'
         env:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: docker compose build
 
       - name: Azure login
+        if: github.event_name == 'push'
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -124,9 +129,11 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Login to Azure Container Registry
+        if: github.event_name == 'push'
         run: az acr login --name ${{ secrets.ACR_NAME }}
 
       - name: Configure Container Apps for ACR access
+        if: github.event_name == 'push'
         run: |
           ACR_ID=$(az acr show \
             --name ${{ secrets.ACR_NAME }} \
@@ -167,6 +174,7 @@ jobs:
           done
 
       - name: Configure private document storage
+        if: github.event_name == 'push'
         run: |
           STORAGE_ACCOUNT=$(echo "${{ secrets.ACR_NAME }}docs" \
             | tr -cd '[:alnum:]' \
@@ -228,18 +236,23 @@ jobs:
           echo "DOCUMENT_STORAGE_ACCOUNT=$STORAGE_ACCOUNT" >> "$GITHUB_ENV"
 
       - name: Build backend image
+        if: github.event_name == 'push'
         run: docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }} ./backend
 
       - name: Build frontend image
+        if: github.event_name == 'push'
         run: docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }} ./frontend
 
       - name: Push backend image
+        if: github.event_name == 'push'
         run: docker push ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}
 
       - name: Push frontend image
+        if: github.event_name == 'push'
         run: docker push ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
 
       - name: Set backend secrets
+        if: github.event_name == 'push'
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
@@ -254,6 +267,7 @@ jobs:
               "database-url=$DATABASE_URL" \
               "jwt-secret=$JWT_SECRET"
       - name: Deploy backend to Azure Container App
+        if: github.event_name == 'push'
         run: |
           az containerapp update \
             --name ${{ secrets.AZURE_BACKEND_APP }} \
@@ -268,6 +282,7 @@ jobs:
               "JWT_SECRET=secretref:jwt-secret"
 
       - name: Smoke test deployed backend
+        if: github.event_name == 'push'
         run: |
           BACKEND_FQDN=$(az containerapp show \
             --name ${{ secrets.AZURE_BACKEND_APP }} \
@@ -289,6 +304,7 @@ jobs:
             | grep --quiet '"status":"ok"'
 
       - name: Deploy frontend to Azure Container App
+        if: github.event_name == 'push'
         run: |
           BACKEND_FQDN=$(az containerapp show \
             --name ${{ secrets.AZURE_BACKEND_APP }} \
