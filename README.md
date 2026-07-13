@@ -47,9 +47,8 @@ der Wert ausschließlich als GitHub-Secret an ein Container-App-Secret übergebe
 - Backend-Healthcheck: http://localhost:3001/api/health
 - Prometheus: http://localhost:9090
 
-- Login: buerger@example.com PW: passwort123
-- Login: Sachbearbeiter@example.com PW: passwort123
-- Login: Leon@example.com PW: Leon1234
+- Login: buerger@example.com PW: password123
+- Login: sachbearbeiter@example.com PW: password123
 
 Prometheus überwacht HTTP-Anfragen, Antwortzeiten, Fehler sowie fachliche Antrags- und Statusmetriken. Alarmregeln und Incident-Ablauf sind in [docs/monitoring.md](docs/monitoring.md) beschrieben.
 
