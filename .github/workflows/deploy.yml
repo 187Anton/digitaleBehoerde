@@ -112,6 +112,8 @@ jobs:
           npm --prefix frontend run test:e2e
 
       - name: Build Docker containers
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: docker compose build
 
       - name: Azure login
@@ -238,13 +240,19 @@ jobs:
         run: docker push ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
 
       - name: Set backend secrets
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: |
+          test -n "$DATABASE_URL"
+          test -n "$JWT_SECRET"
+
           az containerapp secret set \
             --name ${{ secrets.AZURE_BACKEND_APP }} \
             --resource-group ${{ secrets.AZURE_RG }} \
             --secrets \
-              "database-url=${{ secrets.DATABASE_URL }}" \
-              "jwt-secret=${{ secrets.JWT_SECRET }}"
+              "database-url=$DATABASE_URL" \
+              "jwt-secret=$JWT_SECRET"
       - name: Deploy backend to Azure Container App
         run: |
           az containerapp update \
@@ -252,6 +260,7 @@ jobs:
             --resource-group ${{ secrets.AZURE_RG }} \
             --image ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }} \
             --set-env-vars \
+              "NODE_ENV=production" \
               "DOCUMENT_STORAGE=azure" \
               "AZURE_STORAGE_ACCOUNT=$DOCUMENT_STORAGE_ACCOUNT" \
               "AZURE_STORAGE_CONTAINER=application-documents" \
