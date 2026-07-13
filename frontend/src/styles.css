@@ -625,6 +625,12 @@ a {
   flex-wrap: wrap;
 }
 
+.document-row-main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
 .application-actions {
   display: grid;
   justify-items: end;

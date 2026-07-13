@@ -828,13 +828,16 @@ function App(): JSX.Element {
                           {application.documents.map((document) => (
                             <li className="document-row" key={document.id}>
                               <div className="doc-icon">{documentBadgeLabel(document.originalName)}</div>
-                              <a
-                                href={applicationDocumentUrl(application.id, document.id)}
-                                target="_blank"
-                                rel="noreferrer"
-                              >
-                                {document.originalName}
-                              </a>
+                              <div className="document-row-main">
+                                <span>{documentTypeLabels[document.type]}</span>
+                                <a
+                                  href={applicationDocumentUrl(application.id, document.id)}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  {document.originalName}
+                                </a>
+                              </div>
                               {application.status === "SUBMITTED" ? (
                                 <div className="document-actions">
                                   <label className="file-button">

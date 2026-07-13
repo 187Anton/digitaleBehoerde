@@ -265,6 +265,7 @@ export function CaseworkerApplications({
                     <div className="document-preview-header">
                       <div className="doc-icon">{documentBadgeLabel(document.originalName)}</div>
                       <div>
+                        <span>{documentTypeLabels[document.type]}</span>
                         <strong>{document.originalName}</strong>
                         <a
                           href={applicationDocumentUrl(application.id, document.id)}
