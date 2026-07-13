@@ -112,6 +112,7 @@ export function CaseworkerApplications({
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("ALL");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [sortMode, setSortMode] = useState<SortMode>("OLDEST");
+  const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
 
   const visibleApplications = useMemo(() => {
     const filtered = applications.filter(
@@ -131,6 +132,25 @@ export function CaseworkerApplications({
       return sortMode === "NEWEST" ? -dateDifference : dateDifference;
     });
   }, [applications, sortMode, statusFilter, typeFilter]);
+
+  const selectedApplication = selectedApplicationId
+    ? applications.find((application) => application.id === selectedApplicationId) ?? null
+    : null;
+
+  function getCityInfo(application: Application): { oldCity: string; newCity: string } {
+    if (application.type === "RESIDENCE_CHANGE" && application.residenceChange) {
+      return {
+        oldCity: application.residenceChange.oldCity ?? "—",
+        newCity: application.residenceChange.newCity ?? "—",
+      };
+    }
+    return { oldCity: "—", newCity: "—" };
+  }
+
+  function formatShortId(id: string): string {
+    return id.slice(0, 8);
+  }
+
 
   return (
     <section className="section stack">
@@ -192,7 +212,16 @@ export function CaseworkerApplications({
       {visibleApplications.length === 0 ? (
         <p className="muted">Keine Anträge für die gewählten Filter vorhanden.</p>
       ) : null}
-      {visibleApplications.map((application) => {
+      {selectedApplication ? (
+        <>
+          <button
+            className="ghost-button"
+            type="button"
+            onClick={() => setSelectedApplicationId(null)}
+          >
+            &larr; Zurueck zur Uebersicht
+          </button>
+          {[selectedApplication].map((application) => {
         const residence = application.residenceChange;
         const dogTax = application.dogTax;
         const certificate = application.certificateOfConduct;
@@ -333,6 +362,57 @@ export function CaseworkerApplications({
           </article>
         );
       })}
+        </>
+      ) : (
+        <table className="caseworker-table">
+          <thead>
+            <tr>
+              <th scope="col">Antrags-ID</th>
+              <th scope="col">Eingegangen</th>
+              <th scope="col">Antragsteller</th>
+              <th scope="col">Bisherige Stadt</th>
+              <th scope="col">Neue Stadt</th>
+              <th scope="col">Antragstyp</th>
+              <th scope="col">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visibleApplications.map((application) => {
+              const { oldCity, newCity } = getCityInfo(application);
+              const citizenName = [application.user?.firstName, application.user?.lastName]
+                .filter(Boolean)
+                .join(" ") || "Unbekannt";
+              return (
+                <tr
+                  key={application.id}
+                  tabIndex={0}
+                  role="button"
+                  onClick={() => setSelectedApplicationId(application.id)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      setSelectedApplicationId(application.id);
+                    }
+                  }}
+                  className="caseworker-row"
+                >
+                  <td>{formatShortId(application.id)}</td>
+                  <td>{new Date(application.createdAt).toLocaleDateString("de-DE")}</td>
+                  <td>{citizenName}</td>
+                  <td>{oldCity}</td>
+                  <td>{newCity}</td>
+                  <td>{applicationTypeLabels[application.type]}</td>
+                  <td>
+                    <span className={statusClassName(application.status)}>
+                      {statusLabels[application.status]}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
     </section>
   );
 }
