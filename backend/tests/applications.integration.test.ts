@@ -33,7 +33,8 @@ async function createUser(role: "CITIZEN" | "CASEWORKER" = "CITIZEN") {
 
 function submitResidenceChange(
   cookie?: string,
-  payload: typeof validPayload = validPayload
+  payload: typeof validPayload = validPayload,
+  options: { includeMoveInConfirmation?: boolean } = {}
 ) {
   const residenceRequest = request(app)
     .post("/api/applications/residence-change")
@@ -46,6 +47,12 @@ function submitResidenceChange(
       filename: "wohnungsgeber.pdf",
       contentType: "application/pdf",
     });
+  if (options.includeMoveInConfirmation) {
+    residenceRequest.attach("moveInConfirmation", Buffer.from("%PDF-1.4 einzug"), {
+      filename: "einzug.pdf",
+      contentType: "application/pdf",
+    });
+  }
   return cookie ? residenceRequest.set("Cookie", cookie) : residenceRequest;
 }
 
@@ -191,22 +198,9 @@ describe("Antrags-Endpunkte (Integration)", () => {
 
   it("akzeptiert eine optionale Einzugsbestätigung", async () => {
     const { cookie } = await createUser();
-    const res = await request(app)
-      .post("/api/applications/residence-change")
-      .set("Cookie", cookie)
-      .field("data", JSON.stringify(validPayload))
-      .attach("identityDocument", Buffer.from("%PDF-1.4 ausweis"), {
-        filename: "personalausweis.pdf",
-        contentType: "application/pdf",
-      })
-      .attach("landlordConfirmation", Buffer.from("%PDF-1.4 wohnungsgeber"), {
-        filename: "wohnungsgeber.pdf",
-        contentType: "application/pdf",
-      })
-      .attach("moveInConfirmation", Buffer.from("%PDF-1.4 einzug"), {
-        filename: "einzug.pdf",
-        contentType: "application/pdf",
-      });
+    const res = await submitResidenceChange(cookie, validPayload, {
+      includeMoveInConfirmation: true,
+    });
 
     expect(res.status).toBe(201);
     expect(res.body.application.documents).toEqual(
