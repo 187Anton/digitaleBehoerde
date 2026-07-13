@@ -24,10 +24,24 @@ Web-App zur digitalen Abwicklung ausgewählter Behördengänge.
 
 ## Lokal starten
 
+Docker Compose startet das Backend im Produktionsmodus und verlangt deshalb ein lokales
+`JWT_SECRET`. Zuerst die nicht versionierte Compose-Umgebung anlegen:
+
+```bash
+cp .env.example .env
+openssl rand -hex 32
+```
+
+Den ausgegebenen Zufallswert anschließend in `.env` als `JWT_SECRET` eintragen. Dieses lokale
+Secret niemals für eine Deployment-Umgebung wiederverwenden.
+
 ```bash
 docker compose up --build -d
 docker compose exec backend npx prisma db seed
 ```
+
+Ohne gesetztes `JWT_SECRET` verweigert das Backend im Produktionsmodus den Start. In Azure wird
+der Wert ausschließlich als GitHub-Secret an ein Container-App-Secret übergeben.
 
 - Anwendung: http://localhost:3000
 - Backend-Healthcheck: http://localhost:3001/api/health
