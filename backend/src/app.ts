@@ -1,3 +1,4 @@
+import "express-async-errors";
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -38,23 +39,24 @@ export function createApp() {
   app.use("/api/applications", applicationsRouter);
   app.use("/api/caseworker", caseworkerRouter);
   app.use("/api/profile", profileRouter);
-  app.use(
-    (
-      err: unknown,
-      _req: express.Request,
-      res: express.Response,
-      _next: express.NextFunction
-    ) => {
-      if (err instanceof multer.MulterError) {
-        const error = err.code === "LIMIT_FILE_SIZE"
-          ? "Dokument darf maximal 5 MB groß sein."
-          : "Nur PDF-, JPEG- und PNG-Dokumente sind erlaubt.";
-        return res.status(400).json({ error });
-      }
-      console.error(err);
-      res.status(500).json({ error: "Interner Serverfehler." });
-    }
-  );
-
+  app.use(errorHandler);
   return app;
+}
+
+export function errorHandler(
+  err: unknown,
+  _req: express.Request,
+  res: express.Response,
+  _next: express.NextFunction
+) {
+  if (err instanceof multer.MulterError) {
+    const error = err.code === "LIMIT_FILE_SIZE"
+      ? "Dokument darf maximal 5 MB groß sein."
+      : "Nur PDF-, JPEG- und PNG-Dokumente sind erlaubt.";
+    return res.status(400).json({ error });
+  }
+  const message =
+    err instanceof Error ? `${err.name}: ${err.message}` : "Unbekannter Fehler";
+  console.error("Unbehandelter Routen-Fehler:", message);
+  res.status(500).json({ error: "Interner Serverfehler." });
 }
