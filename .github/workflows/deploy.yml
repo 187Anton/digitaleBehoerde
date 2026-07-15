@@ -318,4 +318,4 @@ jobs:
             --name ${{ secrets.AZURE_FRONTEND_APP }} \
             --resource-group ${{ secrets.AZURE_RG }} \
             --image ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }} \
-            --set-env-vars "BACKEND_URL=https://$BACKEND_FQDN"
+            --set-env-vars "BACKEND_URL=https://$BACKEND_FQDN" "NGINX_RESOLVER=168.63.129.16"
