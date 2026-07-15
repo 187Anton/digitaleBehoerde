@@ -46,6 +46,10 @@ test("Bürger reicht Wohnsitzummeldung ein und Sachbearbeiter genehmigt sie", as
   await page.getByRole("button", { name: "Einloggen" }).click();
 
   await expect(page.getByRole("heading", { name: "Antragsbearbeitung" })).toBeVisible();
+  await page.getByLabel("Anträge sortieren").selectOption("NEWEST");
+  const overviewRow = page.locator("tr.caseworker-row").first();
+  await overviewRow.focus();
+  await overviewRow.press("Enter");
   const caseworkerApplication = page.locator("article").filter({ hasText: newStreet });
   await expect(caseworkerApplication).toHaveCount(1);
   await expect(caseworkerApplication.getByText("Personalausweis", { exact: true })).toBeVisible();

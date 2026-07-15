@@ -148,6 +148,7 @@ test("Sachbearbeitung kann den Chat zu jedem Antrag öffnen und antworten", asyn
   });
 
   await page.goto("/");
+  await page.locator("tr.caseworker-row").first().click();
   await page.getByRole("button", { name: "Nachrichten (1)" }).click();
   await expect(page.getByText(citizenMessage.body)).toBeVisible();
 

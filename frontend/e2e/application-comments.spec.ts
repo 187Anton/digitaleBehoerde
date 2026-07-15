@@ -69,6 +69,7 @@ test("Sachbearbeiter können einen Kommentar hinzufügen", async ({ page }) => {
   });
 
   await page.goto("/");
+  await page.locator("tr.caseworker-row").first().click();
   await page.getByLabel("Kommentar an den Bürger").fill(comment.body);
   await page.getByRole("button", { name: "Kommentar senden" }).click();
 

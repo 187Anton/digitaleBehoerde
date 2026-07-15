@@ -111,5 +111,5 @@ test("eingereichte Anträge und Dokumente können bearbeitet werden", async ({ p
   await expect(page.getByRole("link", { name: "neu.pdf" })).toBeVisible();
 
   await page.getByRole("button", { name: "Löschen" }).click();
-  await expect(page.getByText("Kein Dokument vorhanden.")).toBeVisible();
+  await expect(page.getByText("Kein Dokument vorhanden.").first()).toBeVisible();
 });

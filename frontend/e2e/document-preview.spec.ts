@@ -69,6 +69,7 @@ test("Sachbearbeitung sieht PDF- und Bildvorschauen mit Download-Fallback", asyn
   );
 
   await page.goto("/");
+  await page.locator("tr.caseworker-row").first().click();
 
   const pdfPreview = page.getByTitle("Vorschau von nachweis.pdf");
   const imagePreview = page.getByAltText("Vorschau von ausweis.png");

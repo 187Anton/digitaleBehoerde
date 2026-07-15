@@ -51,7 +51,7 @@ test("Sachbearbeitung filtert nach Typ und Status und sortiert Anträge", async 
 
   await page.goto("/");
 
-  await expect(page.locator("article h3")).toHaveText([
+  await expect(page.locator("tr.caseworker-row td:nth-child(6)")).toHaveText([
     "Hundesteuer anmelden",
     "Wohnsitz ummelden",
     "Führungszeugnis beantragen",
@@ -59,20 +59,20 @@ test("Sachbearbeitung filtert nach Typ und Status und sortiert Anträge", async 
   ]);
 
   await page.getByRole("tab", { name: "Hundesteuer (1)" }).click();
-  await expect(page.locator("article")).toHaveCount(1);
-  await expect(page.locator("article h3")).toHaveText("Hundesteuer anmelden");
+  await expect(page.locator("tr.caseworker-row")).toHaveCount(1);
+  await expect(page.locator("tr.caseworker-row td:nth-child(6)")).toHaveText("Hundesteuer anmelden");
 
   await page.getByRole("tab", { name: "Alle (4)" }).click();
   await page.getByLabel("Antragsstatus filtern").selectOption("APPROVED");
-  await expect(page.locator("article")).toHaveCount(1);
-  await expect(page.locator("article").getByText("Genehmigt", { exact: true })).toBeVisible();
+  await expect(page.locator("tr.caseworker-row")).toHaveCount(1);
+  await expect(page.locator("tr.caseworker-row .status-pill")).toHaveText("Genehmigt");
 
   await page.getByLabel("Antragsstatus filtern").selectOption("ALL");
   await page.getByLabel("Anträge sortieren").selectOption("NEWEST");
-  await expect(page.locator("article").first().getByText("In Bearbeitung", { exact: true })).toBeVisible();
+  await expect(page.locator("tr.caseworker-row").first().locator(".status-pill")).toHaveText("In Bearbeitung");
 
   await page.getByLabel("Anträge sortieren").selectOption("STATUS");
-  await expect(page.locator("article .status-pill")).toHaveText([
+  await expect(page.locator("tr.caseworker-row .status-pill")).toHaveText([
     "Eingereicht",
     "In Bearbeitung",
     "Genehmigt",
