@@ -162,6 +162,11 @@ function App(): JSX.Element {
       window.clearInterval(interval);
     };
   }, [user]);
+  function clearPasswordState() {
+    setPassword("");
+    setPasswordConfirmation("");
+    setIsPasswordVisible(false);
+  }
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (mode === "register" && password.length < 8) {
@@ -179,6 +184,7 @@ function App(): JSX.Element {
         mode === "login"
           ? await login({ email, password })
           : await register({ email, password, firstName, lastName });
+      clearPasswordState();
       setUser(response.user);
       setMessage(mode === "login" ? "Erfolgreich angemeldet." : "Registrierung erfolgreich.");
     } catch (error) {
@@ -192,12 +198,12 @@ function App(): JSX.Element {
   }
   function switchAuthMode() {
     setMode((current) => current === "login" ? "register" : "login");
-    setPassword("");
-    setPasswordConfirmation("");
-    setIsPasswordVisible(false);
+    clearPasswordState();
     setMessage("");
   }
   async function handleLogout() {
+    clearPasswordState();
+    setMode("login");
     setIsLoading(true);
     setMessage("");
     try {
