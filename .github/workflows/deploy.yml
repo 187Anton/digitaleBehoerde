@@ -16,6 +16,7 @@ permissions:
 env:
   BACKEND_IMAGE: digitale-behoerde-backend
   FRONTEND_IMAGE: digitale-behoerde-frontend
+  PROMETHEUS_IMAGE: digitale-behoerde-prometheus
 
 jobs:
   build-and-deploy:
@@ -319,3 +320,19 @@ jobs:
             --resource-group ${{ secrets.AZURE_RG }} \
             --image ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }} \
             --set-env-vars "BACKEND_URL=https://$BACKEND_FQDN" "NGINX_RESOLVER=168.63.129.16"
+
+      - name: Build Prometheus image
+        if: github.event_name == 'push'
+        run: docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.PROMETHEUS_IMAGE }}:${{ github.sha }} ./monitoring
+
+      - name: Push Prometheus image
+        if: github.event_name == 'push'
+        run: docker push ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.PROMETHEUS_IMAGE }}:${{ github.sha }}
+
+      - name: Deploy Prometheus to Azure Container App
+        if: github.event_name == 'push'
+        run: |
+          az containerapp update \
+            --name ca-prometheus \
+            --resource-group ${{ secrets.AZURE_RG }} \
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.PROMETHEUS_IMAGE }}:${{ github.sha }}
