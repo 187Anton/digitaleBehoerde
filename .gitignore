@@ -15,6 +15,7 @@ uploads/
 .test-uploads/
 playwright-report/
 test-results/
+coverage/
 
 # IDE
 .idea/
