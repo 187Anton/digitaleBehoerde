@@ -67,7 +67,16 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/digitale_behoerde_test
           JWT_SECRET: ci-test-secret
-        run: npm test
+        run: npm run test:coverage
+
+      - name: Upload backend coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Build backend for end-to-end tests
         working-directory: ./backend
@@ -114,6 +123,17 @@ jobs:
           done
 
           npm --prefix frontend run test:e2e
+
+      - name: Upload end-to-end failure report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: end-to-end-failure-report
+          path: |
+            frontend/playwright-report
+            frontend/test-results
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Build Docker containers
         if: github.event_name == 'push'
