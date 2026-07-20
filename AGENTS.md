@@ -17,7 +17,7 @@ Aktuell unterstützte Vorgänge:
 Technik:
 
 - Frontend: React 18, TypeScript, Vite, CSS; Auslieferung über nginx
-- Backend: Node.js 20, Express, TypeScript (strict, ESM), Zod
+- Backend: Node.js 20.19.4, Express, TypeScript (strict, ESM), Zod
 - Datenhaltung: PostgreSQL 16, Prisma 5
 - Authentifizierung: JWT in einem HTTP-only Cookie
 - Dokumente: lokal im Development, Azure Blob Storage in der Deployment-Umgebung
@@ -44,7 +44,7 @@ Technik:
 
 ## Lokales Setup
 
-Voraussetzungen: Docker mit Compose sowie Node.js 20 und npm für Entwicklung außerhalb der Container.
+Voraussetzungen: Docker mit Compose sowie Node.js 20.19.4 und npm für Entwicklung außerhalb der Container.
 
 Einfachster Full-Stack-Start:
 

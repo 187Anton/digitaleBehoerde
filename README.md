@@ -4,6 +4,9 @@
 
 Web-App zur digitalen Abwicklung ausgewählter Behördengänge.
 
+Für die lokale Entwicklung wird Node.js 20.19.4 verwendet. Die Version ist in `.nvmrc`,
+den Dockerfiles und dem GitHub-Actions-Workflow festgelegt.
+
 ## Geplanter MVP
 
 - Login und Registrierung
